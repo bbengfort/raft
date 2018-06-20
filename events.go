@@ -35,7 +35,10 @@ type EventType uint16
 
 // String returns the name of event types
 func (t EventType) String() string {
-	return eventTypeStrings[t]
+	if int(t) < len(eventTypeStrings) {
+		return eventTypeStrings[t]
+	}
+	return eventTypeStrings[0]
 }
 
 // Callback is a function that can receive events.

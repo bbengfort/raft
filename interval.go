@@ -23,17 +23,17 @@ import (
 // interrupted which resets the timer to a new delay. Timer state (running or
 // not running) can be determined by the Running() method.
 type Interval interface {
-	Start() bool                // start the interval to periodically call its function
-	Stop() bool                 // stop the interval, the function will not be called
-	Interrupt() bool            // interrupt the interval, setting it to the next period
-	Running() bool              // whether or not the interval is running
-	GetDelay() time.Duration    // the duration of the current interval period
-	Register(callback Callback) // register a handler for the interval event
+	Start() bool             // start the interval to periodically call its function
+	Stop() bool              // stop the interval, the function will not be called
+	Interrupt() bool         // interrupt the interval, setting it to the next period
+	Running() bool           // whether or not the interval is running
+	GetDelay() time.Duration // the duration of the current interval period
 }
 
 // NewFixedInterval creates and initializes a new fixed interval.
-func NewFixedInterval(delay time.Duration, etype EventType) *FixedInterval {
+func NewFixedInterval(actor Actor, delay time.Duration, etype EventType) *FixedInterval {
 	return &FixedInterval{
+		actor:       actor,
 		delay:       delay,
 		etype:       etype,
 		initialized: true,
@@ -42,11 +42,12 @@ func NewFixedInterval(delay time.Duration, etype EventType) *FixedInterval {
 }
 
 // NewRandomInterval creates and initializes a new random interval.
-func NewRandomInterval(minDelay, maxDelay time.Duration, etype EventType) *RandomInterval {
+func NewRandomInterval(actor Actor, minDelay, maxDelay time.Duration, etype EventType) *RandomInterval {
 	return &RandomInterval{
 		minDelay: int64(minDelay),
 		maxDelay: int64(maxDelay),
 		FixedInterval: FixedInterval{
+			actor:       actor,
 			etype:       etype,
 			initialized: true,
 			timer:       nil,
@@ -62,6 +63,7 @@ func NewRandomInterval(minDelay, maxDelay time.Duration, etype EventType) *Rando
 // does that by wrapping a time.Timer object, adding the additional Interval
 // functionality as well as the event dispatcher functionality.
 type FixedInterval struct {
+	actor       Actor         // The listener to dispatch events to
 	delay       time.Duration // The fixed interval to push events on
 	etype       EventType     // The type of event dispatched by the timer
 	initialized bool          // If the interval has been initialized
@@ -100,10 +102,11 @@ func (t *FixedInterval) action() {
 	t.timer = nil
 
 	// Dispatch the internal event
-	// if err := t.Dispatch(t.etype, nil); err != nil {
-	// 	t.echan <- err
-	// 	return
-	// }
+	// NOTE: if the actor event buffer is full, this will not interrupt the
+	// ticker since it is dispatched in its own go routine.
+	go func() {
+		t.actor.Dispatch(&event{etype: t.etype, source: t, value: nil})
+	}()
 
 	// Create a new timer for the next action
 	t.timer = time.AfterFunc(t.GetDelay(), t.action)
@@ -143,11 +146,6 @@ func (t *FixedInterval) Interrupt() bool {
 // Running returns true if the timer exists and false otherwise.
 func (t *FixedInterval) Running() bool {
 	return t.timer != nil
-}
-
-// Register the specific event type with the callback
-func (t *FixedInterval) Register(callback Callback) {
-	// t.DispatcherNonTS.Register(t.etype, callback)
 }
 
 //===========================================================================
@@ -197,10 +195,11 @@ func (t *RandomInterval) action() {
 	t.timer = nil
 
 	// Dispatch the internal event
-	// if err := t.Dispatch(t.etype, nil); err != nil {
-	// 	t.echan <- err
-	// 	return
-	// }
+	// NOTE: if the actor event buffer is full, this will not interrupt the
+	// ticker since it is dispatched in its own go routine.
+	go func() {
+		t.actor.Dispatch(&event{etype: t.etype, source: t, value: nil})
+	}()
 
 	// Create a new timer for the next action
 	t.timer = time.AfterFunc(t.GetDelay(), t.action)
