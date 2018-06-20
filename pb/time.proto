@@ -1,0 +1,8 @@
+// Defines timestamp datastructure
+syntax = "proto3";
+package pb;
+
+// Serializes a time.Time object as an RFC 3339 encoded string.
+message Time {
+    bytes rfc3339 = 1;
+}

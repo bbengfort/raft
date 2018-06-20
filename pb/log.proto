@@ -1,0 +1,29 @@
+// Defines data structures for log entries and metadata
+syntax = "proto3";
+package pb;
+
+import "time.proto";
+
+// Defines an entry in the log
+message LogEntry {
+    uint64 index = 1; // The expected position of the log entry
+    uint64 term  = 2; // The term of the log entry
+    string name  = 4; // The name of the command or object
+    bytes value  = 5; // The value of the object or command (nil for noop)
+}
+
+// Defines meta data for the log
+message LogMeta {
+    uint64 lastApplied = 1; // The index of the last applied entry
+    uint64 commitIndex = 2; // The index of the last committed entry
+    uint64 length = 3;      // Number of entries in the log
+    Time created = 4;       // Timestamp the log was created
+    Time updated = 5;       // Timestamp the log was last updated
+}
+
+// A complete log (entries and meta) that is written to disk but cannot be
+// modified in place, e.g. has to be written in its entirety.
+message LogSnapshot {
+    LogMeta meta = 1;              // the meta data of the log
+    repeated LogEntry entries = 2; // the entries in the snapshot
+}

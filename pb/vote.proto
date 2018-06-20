@@ -1,0 +1,15 @@
+syntax = "proto3";
+package pb;
+
+message VoteRequest {
+    uint64 term = 1;          // The epoch the candidate wants to be in
+    string candidate = 2;     // The identity of the candidate
+    uint64 lastLogIndex = 3;  // The last index in the candidate's log
+    uint64 lastLogTerm = 4;   // The last epoch in the candidate's log
+}
+
+message VoteReply {
+    string remote = 1;        // Identity of the follower
+    uint64 term = 2;          // Current epoch of the follower
+    bool granted = 3;         // At least one vote is granted
+}

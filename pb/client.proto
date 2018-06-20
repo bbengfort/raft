@@ -1,0 +1,17 @@
+syntax = "proto3";
+package pb;
+
+import "log.proto";
+
+message CommitRequest {
+    string identity = 1;
+    string name = 2;
+    bytes value = 7;
+}
+
+message CommitReply {
+    bool success = 1;
+    string redirect = 2;
+    string error = 3;
+    LogEntry entry = 4;
+}

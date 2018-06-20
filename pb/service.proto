@@ -1,0 +1,12 @@
+syntax = "proto3";
+package pb;
+
+import "append.proto";
+import "client.proto";
+import "vote.proto";
+
+service Raft {
+    rpc Commit (CommitRequest) returns (CommitReply) {}
+    rpc RequestVote (VoteRequest) returns (VoteReply) {}
+    rpc AppendEntries (AppendRequest) returns (AppendReply) {}
+}

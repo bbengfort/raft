@@ -1,0 +1,21 @@
+syntax = "proto3";
+package pb;
+
+import "log.proto";
+
+message AppendRequest {
+    uint64 term = 1;                // Epoch of the leader
+    string leader = 2;              // Identity of the leader
+    uint64 prevLogIndex = 3;        // Latest index in leader's log
+    uint64 prevLogTerm = 4;         // Epoch of the leader's prev log entry
+    uint64 leaderCommit = 5;        // The commit index of the leader for local commit
+    repeated LogEntry entries = 6;  // Entries to append to the remote's log
+}
+
+message AppendReply {
+    string remote = 1;              // Identity of the follower
+    uint64 term = 2;                // Epoch the follower is currently in
+    bool success = 3;               // If entries were appended or not
+    uint64 index = 4;               // Latest index in follower's log
+    uint64 commitIndex = 5;         // The commit index of follower
+}
