@@ -8,11 +8,12 @@ import (
 )
 
 // NewLog creates and initializes a new log whose first entry is the NullEntry.
-func NewLog() *Log {
+func NewLog(actor Actor) *Log {
 	entries := make([]*pb.LogEntry, 1)
 	entries[0] = pb.NullEntry
 
 	return &Log{
+		actor:   actor,
 		entries: entries,
 		created: time.Now(),
 		updated: time.Now(),
@@ -36,6 +37,7 @@ func NewLog() *Log {
 // from multiple go routines. Instead the log should be maintained by a single
 // state machine that updates it sequentially when events occur.
 type Log struct {
+	actor       Actor          // The actor to dispatch events for
 	lastApplied uint64         // The index of the last applied log entry
 	commitIndex uint64         // The index of the last committed log entry
 	entries     []*pb.LogEntry // In-memory array of log entries
@@ -155,6 +157,28 @@ func (l *Log) Append(entries ...*pb.LogEntry) error {
 
 // Commit all entries up to and including the specified index.
 func (l *Log) Commit(index uint64) error {
+	// Ensure the index specified is in the log
+	if index < 1 || index > l.lastApplied {
+		return fmt.Errorf("cannot commit invalid index %d", index)
+	}
+
+	// Ensure that we haven't already committed this index
+	if index <= l.commitIndex {
+		return fmt.Errorf("index at %d already committed", index)
+	}
+
+	// Create a commit event for all entries now committed
+	for i := l.commitIndex + 1; i <= index; i++ {
+		go l.actor.Dispatch(&event{
+			etype:  CommitEvent,
+			source: l,
+			value:  l.entries[i],
+		})
+	}
+
+	// Update the commit index and the log
+	l.commitIndex = index
+	debug("committed index %d", l.commitIndex)
 	return nil
 }
 
@@ -166,6 +190,41 @@ func (l *Log) Commit(index uint64) error {
 // This method truncates everything after the given index, but keeps the
 // entry at the specified index; e.g. truncate after.
 func (l *Log) Truncate(index, term uint64) error {
+	// Ensure the truncation matches an entry
+	if index < 0 || index > l.lastApplied {
+		return fmt.Errorf("cannot truncate invalid index %d", index)
+	}
+
+	// Specifies the index of the entry to be truncated
+	nextIndex := index + 1
+
+	// Do not allow committed entries to be truncted
+	if nextIndex <= l.commitIndex {
+		return fmt.Errorf("cannot truncate already committed index %d", index)
+	}
+
+	// Do not truncate if entry at index does not have matching term
+	entry := l.entries[index]
+	if entry.Term != term {
+		return fmt.Errorf("entry at index %d does not match term %d", index, term)
+	}
+
+	// Only perform truncation if necessary
+	if index < l.lastApplied {
+		// Drop all entries that appear after the index
+		for _, droppedEntry := range l.entries[nextIndex:] {
+			go l.actor.Dispatch(&event{
+				etype:  DropEvent,
+				source: l,
+				value:  droppedEntry,
+			})
+		}
+
+		// Update the entries and meta data
+		l.entries = l.entries[0:nextIndex]
+		l.lastApplied = index
+	}
+
 	return nil
 }
 

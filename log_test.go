@@ -14,7 +14,7 @@ import (
 var _ = Describe("Log", func() {
 
 	It("should correctly initialize empty log", func() {
-		log := NewLog()
+		log := NewLog(NewLocker(func(e Event) error { return nil }))
 
 		Ω(log.LastApplied()).Should(Equal(uint64(0)))
 		Ω(log.CommitIndex()).Should(Equal(uint64(0)))
@@ -29,7 +29,7 @@ var _ = Describe("Log", func() {
 		var log *Log
 
 		BeforeEach(func() {
-			log = NewLog()
+			log = NewLog(NewLocker(func(e Event) error { return nil }))
 		})
 
 		Context("when log starts empty", func() {

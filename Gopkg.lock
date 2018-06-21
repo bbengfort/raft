@@ -2,6 +2,15 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/bbengfort/x"
+  packages = [
+    "noplog",
+    "peers"
+  ]
+  revision = "255aed19f049331fbea4afd643938d24146bdf01"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -160,6 +169,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9b5ed21cae07bf715ef3de3812417a328a2ba541648bf185bcb57c6d7a76864e"
+  inputs-digest = "a4954bf9a83bb4b73ddf32ea7cabbbf76c7be575b1f77dd55cc3a90b5215858f"
   solver-name = "gps-cdcl"
   solver-version = 1

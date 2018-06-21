@@ -3,17 +3,31 @@ Package raft implements the Raft consensus algorithm.
 */
 package raft
 
-// Replica represents the local consensus replica and is the primary object
-// in the system. There should only be one replica per process (and many peers).
-// TODO: document more.
-type Replica struct {
+import (
+	"log"
+	"math/rand"
+	"os"
+	"time"
 
-	// Consensus State
-	state    State     // the current behavior of the local replica
-	leader   string    // the name of the leader of the quorum
-	term     uint64    // current term of the replica
-	log      *Log      // state machine command log maintained by consensus
-	votes    *Election // the current leader election, if any
-	votedFor string    // the peer we voted for in the current term
-	ticker   *Ticker   // emits timing events
+	"github.com/bbengfort/x/noplog"
+	"google.golang.org/grpc/grpclog"
+)
+
+//===========================================================================
+// Package Initialization
+//===========================================================================
+
+// PackageVersion of the current Raft implementation
+const PackageVersion = "0.1"
+
+// Initialize the package and random numbers, etc.
+func init() {
+	// Set the random seed to something different each time.
+	rand.Seed(time.Now().Unix())
+
+	// Initialize our debug logging with our prefix
+	SetLogger(log.New(os.Stdout, "[raft] ", log.Lmicroseconds))
+
+	// Stop the grpc verbose logging
+	grpclog.SetLogger(noplog.New())
 }

@@ -1,5 +1,10 @@
 package raft
 
+import (
+	"errors"
+	"fmt"
+)
+
 // Raft server states (not part of the state machine)
 const (
 	Stopped State = iota // stopped should be the zero value and default
@@ -25,4 +30,132 @@ type State uint8
 // String returns a human readable representation of the state.
 func (s State) String() string {
 	return stateStrings[s]
+}
+
+//===========================================================================
+// State Transitions
+//===========================================================================
+
+// SetState updates the state of the local replica, performing any actions
+// related to multiple states, modifying internal private variables as
+// needed and calling the correct internal state setting function.
+//
+// NOTE: These methods are not thread-safe.
+func (r *Replica) setState(state State) (err error) {
+	switch state {
+	case Stopped:
+		err = r.setStoppedState()
+	case Initialized:
+		err = r.setInitializedState()
+	case Running:
+		err = r.setRunningState()
+	case Follower:
+		err = r.setFollowerState()
+	case Candidate:
+		err = r.setCandidateState()
+	case Leader:
+		err = r.setLeaderState()
+	default:
+		err = fmt.Errorf("unknown state '%s'", state)
+	}
+
+	if err == nil {
+		r.state = state
+	}
+
+	return err
+}
+
+// Stops all timers that might be running.
+func (r *Replica) setStoppedState() error {
+	if r.state == Stopped {
+		debug("%s is already stopped", r.Name)
+		return nil
+	}
+
+	r.ticker.StopAll()
+
+	info("%s has been stopped", r.Name)
+	return nil
+}
+
+// Resets any volatile variables on the local replica and is called when the
+// replica becomes a follower or a candidate.
+func (r *Replica) setInitializedState() error {
+	r.votes = nil
+	r.votedFor = ""
+
+	// TODO: reset remote peers configuration.
+	// for _, peer := range r.remotes {
+	//     peer.nextIndex = 0
+	// 	peer.matchIndex = 0
+	// }
+
+	debug("%s has been initialized", r.Name)
+	return nil
+}
+
+// Should only be called once after initialization to bootstrap the quorum by
+// starting the leader's heartbeat or starting the election timeout for all
+// other replicas.
+func (r *Replica) setRunningState() error {
+	if r.state != Initialized {
+		return errors.New("can only set running state from initialized")
+	}
+
+	// TODO: add bootstrap code
+	// Start election timeout to elect the leader if None
+	r.ticker.Start(ElectionTimeout)
+
+	info("%s is now running", r.Name)
+	return nil
+}
+
+func (r *Replica) setFollowerState() error {
+	// Reset volatile state
+	r.setInitializedState()
+
+	// Update the tickers for following
+	r.ticker.Stop(HeartbeatTimeout)
+	r.ticker.Start(ElectionTimeout)
+
+	info("%s is now a follower", r.Name)
+	return nil
+}
+
+func (r *Replica) setCandidateState() error {
+	// Reset volatile state
+	r.setInitializedState()
+
+	// Create the election for the next term and vote for self
+	r.term++
+	r.votes = NewElection()
+	r.votes.Vote("", true)
+
+	// Notify all replicas of the vote request
+	info("%s is candidate for term %d", r.Name, r.term)
+	return nil
+}
+
+func (r *Replica) setLeaderState() error {
+	if r.state == Leader {
+		return nil
+	}
+
+	// Stop the election timeout if we're leader
+	r.ticker.Stop(ElectionTimeout)
+	r.leader = ""
+
+	// Set the volatile state for known state of folloers
+	// for _, peer := range r.remotes {
+	//     remote.nextIndex = r.log.LastApplied() + 1
+	//     remote.matchIndex = 0
+	// }
+
+	// Broadcast the initial heartbeat AppendEntries message
+
+	// Start the heartbeat interval
+	r.ticker.Start(HeartbeatTimeout)
+	status("%s is leader for term %d", r.Name, r.term)
+	return nil
 }
