@@ -72,7 +72,7 @@ func SetLogger(l *log.Logger) {
 // Print to the standard logger at the specified level. Arguments are handled
 // in the manner of log.Printf, but a newline is appended.
 func print(level uint8, msg string, a ...interface{}) {
-	if level >= logLevel {
+	if logLevel <= level {
 		if !strings.HasSuffix(msg, "\n") {
 			msg += "\n"
 		}
@@ -105,7 +105,7 @@ func status(msg string, a ...interface{}) {
 // NOTE: take care with string formatting individual messages, this could
 // lead to a very full caution counter that is taking up memory.
 func caution(msg string, a ...interface{}) {
-	if logLevel < LogCaution {
+	if logLevel > LogCaution {
 		// Don't waste memory if the log level is set below caution.
 		return
 	}

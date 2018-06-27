@@ -8,6 +8,10 @@ import "github.com/bbengfort/x/peers"
 type Replica struct {
 	peers.Peer
 
+	// Network Defintion
+	config  *Config            // configuration values
+	remotes map[string]*Remote // remote peers on the network
+
 	// Consensus State
 	state    State     // the current behavior of the local replica
 	leader   string    // the name of the leader of the quorum
@@ -17,3 +21,8 @@ type Replica struct {
 	votedFor string    // the peer we voted for in the current term
 	ticker   *Ticker   // emits timing events
 }
+
+func (r *Replica) Listen() error        { return nil }
+func (r *Replica) Close() error         { return nil }
+func (r *Replica) Dispatch(Event) error { return nil }
+func (r *Replica) Handle(Event) error   { return nil }

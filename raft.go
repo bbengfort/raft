@@ -23,11 +23,62 @@ const PackageVersion = "0.1"
 // Initialize the package and random numbers, etc.
 func init() {
 	// Set the random seed to something different each time.
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
 
 	// Initialize our debug logging with our prefix
 	SetLogger(log.New(os.Stdout, "[raft] ", log.Lmicroseconds))
+	cautionCounter = new(counter)
+	cautionCounter.init()
 
 	// Stop the grpc verbose logging
 	grpclog.SetLogger(noplog.New())
+}
+
+//===========================================================================
+// New Raft Instance
+//===========================================================================
+
+// New Raft replica with the specified config.
+func New(options *Config) (replica *Replica, err error) {
+	// Create a new configuration from defaults, configuration file, and
+	// the environment; then verify it, returning any errors.
+	config := new(Config)
+	if err = config.Load(); err != nil {
+		return nil, err
+	}
+
+	// Update the configuration with the passed in configuration.
+	if err = config.Update(options); err != nil {
+		return nil, err
+	}
+
+	// Set the logging level and the random seed
+	SetLogLevel(uint8(config.LogLevel))
+	if config.Seed != 0 {
+		rand.Seed(config.Seed)
+	}
+
+	// Create and initialize the replica
+	replica = new(Replica)
+	replica.config = config
+	replica.remotes = make(map[string]*Remote)
+
+	// Create the remotes from peers
+	for _, peer := range config.Peers {
+		// Do not store local host in remotes
+		if config.Name == peer.Name {
+			continue
+		}
+
+		// Create the remote connection and client
+		replica.remotes[peer.Name], err = NewRemote(peer, replica)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Set state to initialized
+	replica.setState(Initialized)
+	info("raft replica with %d remote peers created", len(replica.remotes))
+	return replica, nil
 }

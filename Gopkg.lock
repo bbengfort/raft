@@ -2,13 +2,31 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/bbengfort/x"
   packages = [
     "noplog",
     "peers"
   ]
-  revision = "255aed19f049331fbea4afd643938d24146bdf01"
+  revision = "b8f0a3eeb2d0ed979aed669a2828dbdd4832cf0d"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/fatih/camelcase"
+  packages = ["."]
+  revision = "44e46d280b43ec1531bb25252440e34f1b800b65"
+
+[[projects]]
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
+  version = "v1.0"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -21,6 +39,12 @@
   ]
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/koding/multiconfig"
+  packages = ["."]
+  revision = "69c27309b2d751c576b59ea9c3726597c2375da3"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -169,6 +193,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a4954bf9a83bb4b73ddf32ea7cabbbf76c7be575b1f77dd55cc3a90b5215858f"
+  inputs-digest = "705ad027bb72a93c6ed24754e58f6e4b5224d2ce239b8e4fcebf2c729e969a5d"
   solver-name = "gps-cdcl"
   solver-version = 1

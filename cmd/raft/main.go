@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	"github.com/bbengfort/raft"
+)
 
 func main() {
-	fmt.Println("todo!")
+	replica, err := raft.New(&raft.Config{LogLevel: 2})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = replica.Listen(); err != nil {
+		log.Fatal(err)
+	}
 }
