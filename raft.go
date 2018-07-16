@@ -55,6 +55,7 @@ func New(options *Config) (replica *Replica, err error) {
 	// Set the logging level and the random seed
 	SetLogLevel(uint8(config.LogLevel))
 	if config.Seed != 0 {
+		debug("setting random seed to %d", config.Seed)
 		rand.Seed(config.Seed)
 	}
 
@@ -62,11 +63,18 @@ func New(options *Config) (replica *Replica, err error) {
 	replica = new(Replica)
 	replica.config = config
 	replica.remotes = make(map[string]*Remote)
+	replica.log = NewLog(replica)
+
+	// Create the local replica definition
+	replica.Peer, err = config.GetPeer()
+	if err != nil {
+		return nil, err
+	}
 
 	// Create the remotes from peers
 	for _, peer := range config.Peers {
 		// Do not store local host in remotes
-		if config.Name == peer.Name {
+		if replica.Name == peer.Name {
 			continue
 		}
 
@@ -76,6 +84,13 @@ func New(options *Config) (replica *Replica, err error) {
 			return nil, err
 		}
 	}
+
+	// Create the ticker from the configuration
+	tick, err := config.GetTick()
+	if err != nil {
+		return nil, err
+	}
+	replica.ticker = NewTicker(replica, tick)
 
 	// Set state to initialized
 	replica.setState(Initialized)

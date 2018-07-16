@@ -102,6 +102,56 @@ func (c *Config) Update(o *Config) error {
 	return c.Validate()
 }
 
+// GetName returns the name of the local host defined by the configuration or
+// using the hostname by default.
+func (c *Config) GetName() (string, error) {
+	if c.Name == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			return "", errors.New("could not look up hostname to find peer")
+		}
+		return hostname, nil
+	}
+
+	return c.Name, nil
+}
+
+// GetPeer returns the local peer configuration or an error if no peer is
+// found in the configuration. If the name is not set on the configuration,
+// the hostname is used.
+func (c *Config) GetPeer() (peers.Peer, error) {
+	local, err := c.GetName()
+	if err != nil {
+		return peers.Peer{}, err
+	}
+
+	for _, peer := range c.Peers {
+		if peer.Name == local {
+			return peer, nil
+		}
+	}
+
+	return peers.Peer{}, fmt.Errorf("could not find peer for '%s'", c.Name)
+}
+
+// GetRemotes returns all peer configurations for remote hosts on the network,
+// e.g. by excluding the local peer configuration.
+func (c *Config) GetRemotes() ([]peers.Peer, error) {
+	local, err := c.GetName()
+	if err != nil {
+		return nil, err
+	}
+	remotes := make([]peers.Peer, 0, len(c.Peers)-1)
+
+	for _, peer := range c.Peers {
+		if local == peer.Name {
+			continue
+		}
+	}
+
+	return remotes, nil
+}
+
 // GetPath searches possible configuration paths returning the first path it
 // finds; this path is used when loading the configuration from disk. An
 // error is returned if no configuration file exists.

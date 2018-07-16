@@ -1,0 +1,25 @@
+{
+  "tick": "1s",
+  "timeout": "400ms",
+  "log_level": 2,
+  "peers": [
+    {
+      "pid": 1,
+      "name": "alpha",
+      "addr": "localhost",
+      "port": 3264
+    },
+    {
+      "pid": 2,
+      "name": "bravo",
+      "addr": "localhost",
+      "port": 3265
+    },
+    {
+      "pid": 3,
+      "name": "charlie",
+      "addr": "localhost",
+      "port": 3266
+    }
+  ]
+}

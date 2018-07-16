@@ -24,6 +24,9 @@ type Election struct {
 
 // Vote records the vote for the given Replica, identified by name.
 func (e *Election) Vote(name string, vote bool) {
+	if _, ok := e.ballots[name]; !ok {
+		return
+	}
 	e.ballots[name] = vote
 }
 

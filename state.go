@@ -86,10 +86,10 @@ func (r *Replica) setInitializedState() error {
 	r.votedFor = ""
 
 	// TODO: reset remote peers configuration.
-	// for _, peer := range r.remotes {
-	//     peer.nextIndex = 0
-	// 	peer.matchIndex = 0
-	// }
+	for _, peer := range r.remotes {
+		peer.nextIndex = 0
+		peer.matchIndex = 0
+	}
 
 	debug("%s has been initialized", r.Name)
 	return nil
@@ -107,7 +107,7 @@ func (r *Replica) setRunningState() error {
 	// Start election timeout to elect the leader if None
 	r.ticker.Start(ElectionTimeout)
 
-	info("%s is now running", r.Name)
+	status("%s is now running", r.Name)
 	return nil
 }
 
@@ -119,7 +119,7 @@ func (r *Replica) setFollowerState() error {
 	r.ticker.Stop(HeartbeatTimeout)
 	r.ticker.Start(ElectionTimeout)
 
-	info("%s is now a follower", r.Name)
+	status("%s is now a follower", r.Name)
 	return nil
 }
 
@@ -129,11 +129,19 @@ func (r *Replica) setCandidateState() error {
 
 	// Create the election for the next term and vote for self
 	r.term++
-	r.votes = NewElection()
-	r.votes.Vote("", true)
+	r.votes = r.Quorum()
+	r.votes.Vote(r.Name, true)
 
 	// Notify all replicas of the vote request
-	info("%s is candidate for term %d", r.Name, r.term)
+	lastLogIndex := r.log.LastApplied()
+	lastLogTerm := r.log.LastTerm()
+	for _, remote := range r.remotes {
+		if err := remote.RequestVote(r.Name, r.term, lastLogIndex, lastLogTerm); err != nil {
+			return err
+		}
+	}
+
+	status("%s is candidate for term %d", r.Name, r.term)
 	return nil
 }
 
@@ -144,15 +152,20 @@ func (r *Replica) setLeaderState() error {
 
 	// Stop the election timeout if we're leader
 	r.ticker.Stop(ElectionTimeout)
-	r.leader = ""
+	r.leader = r.Name
 
-	// Set the volatile state for known state of folloers
-	// for _, peer := range r.remotes {
-	//     remote.nextIndex = r.log.LastApplied() + 1
-	//     remote.matchIndex = 0
-	// }
+	// Set the volatile state for known state of followers
+	for _, peer := range r.remotes {
+		peer.nextIndex = r.log.LastApplied() + 1
+		peer.matchIndex = 0
+	}
 
 	// Broadcast the initial heartbeat AppendEntries message
+	for _, remote := range r.remotes {
+		if err := remote.AppendEntries(r.leader, r.term, r.log); err != nil {
+			return err
+		}
+	}
 
 	// Start the heartbeat interval
 	r.ticker.Start(HeartbeatTimeout)

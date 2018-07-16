@@ -255,7 +255,7 @@ func (l *Log) Prev(index uint64) (*pb.LogEntry, error) {
 // After returns all entries after the specified index, inclusive
 func (l *Log) After(index uint64) ([]*pb.LogEntry, error) {
 	if index > l.lastApplied {
-		return nil, fmt.Errorf("no entries after %d", index)
+		return make([]*pb.LogEntry, 0), fmt.Errorf("no entries after %d", index)
 	}
 
 	return l.entries[index:], nil

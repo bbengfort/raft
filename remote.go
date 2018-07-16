@@ -44,7 +44,7 @@ func NewRemote(p peers.Peer, r *Replica) (*Remote, error) {
 // mode, and retries can be made in the next election.
 //
 // Dispatches VoteReplyEvents.
-func (c *Remote) RequestVote(candidate string, term, lastLogIndex, lastLogTerm uint64) {
+func (c *Remote) RequestVote(candidate string, term, lastLogIndex, lastLogTerm uint64) error {
 	go func() {
 		req := &pb.VoteRequest{
 			Term:         term,
@@ -70,6 +70,8 @@ func (c *Remote) RequestVote(candidate string, term, lastLogIndex, lastLogTerm u
 		})
 
 	}()
+
+	return nil
 }
 
 // AppendEntries from leader to followers in quorum; this acts as a heartbeat
@@ -81,23 +83,19 @@ func (c *Remote) RequestVote(candidate string, term, lastLogIndex, lastLogTerm u
 // put into offline mode, and retries can be made after the next heartbeat.
 //
 // Dispatches AppendReplyEvents.
-func (c *Remote) AppendEntries(leader string, term uint64, log *Log) {
+func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 	// NOTE: access the log synchronously before dispatching the go routine.
-	entries, err := log.After(c.nextIndex)
-	if err != nil {
-		// Dispatch the error event and return (fatal error)
-		c.error(err)
-		return
-	}
+	commitIndex := log.CommitIndex()
 
+	// If there are no entries after the next index, ignore the error and
+	// use the empty slice that after returns to send no entries.
+	entries, _ := log.After(c.nextIndex)
+
+	// If there is no previous entry, a fatal error has occurred.
 	prev, err := log.Prev(c.nextIndex)
 	if err != nil {
-		// Dispatch the log error and return (fatal error)
-		c.error(err)
-		return
+		return err
 	}
-
-	commitIndex := log.CommitIndex()
 
 	// Now that we've read the log state, initiate the request in its own thread
 	go func() {
@@ -134,6 +132,8 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) {
 			value:  rep,
 		})
 	}()
+
+	return nil
 }
 
 //===========================================================================
@@ -211,7 +211,7 @@ func (c *Remote) beforeSend() (context.Context, context.CancelFunc, error) {
 	// If we're not online, attempt to connect
 	if !c.online {
 		if err := c.Reset(); err != nil {
-			warne(err)
+			caution(err.Error())
 			return nil, nil, err
 		}
 	}
@@ -224,16 +224,16 @@ func (c *Remote) beforeSend() (context.Context, context.CancelFunc, error) {
 // Handle errors and connections from non responses
 func (c *Remote) afterSend(err error) error {
 	if err != nil {
-		warne(err)
+		caution(err.Error())
 		if c.online {
 			// We were online and now we're offline
-			caution("grpc connection to %s (%s) is offline", c.Name, c.Endpoint(false))
+			info("grpc connection to %s (%s) is offline", c.Name, c.Endpoint(false))
 		}
 		c.online = false
 	} else {
 		if !c.online {
 			// We were offline and now we're online
-			debug("grpc connection to %s (%s) is online", c.Name, c.Endpoint(false))
+			info("grpc connection to %s (%s) is online", c.Name, c.Endpoint(false))
 		}
 		c.online = true
 	}

@@ -43,6 +43,12 @@ var _ = Describe("Election", func() {
 
 		})
 
+		It("should not allow non members to vote", func() {
+			election.Vote("Lucifer", true)
+			Ω(election.Votes()).Should(BeZero())
+			Ω(election.Passed()).Should(BeFalse())
+		})
+
 	})
 
 	Context("size 4 quorum", func() {
@@ -73,6 +79,12 @@ var _ = Describe("Election", func() {
 
 			}
 
+		})
+
+		It("should not allow non members to vote", func() {
+			election.Vote("Lucifer", true)
+			Ω(election.Votes()).Should(BeZero())
+			Ω(election.Passed()).Should(BeFalse())
 		})
 
 	})
@@ -107,6 +119,12 @@ var _ = Describe("Election", func() {
 
 		})
 
+		It("should not allow non members to vote", func() {
+			election.Vote("Lucifer", true)
+			Ω(election.Votes()).Should(BeZero())
+			Ω(election.Passed()).Should(BeFalse())
+		})
+
 	})
 
 	Context("size 6 quorum", func() {
@@ -137,6 +155,12 @@ var _ = Describe("Election", func() {
 
 			}
 
+		})
+
+		It("should not allow non members to vote", func() {
+			election.Vote("Lucifer", true)
+			Ω(election.Votes()).Should(BeZero())
+			Ω(election.Passed()).Should(BeFalse())
 		})
 
 	})
