@@ -12,4 +12,6 @@ var (
 	ErrEventSourceError = errors.New("captured event with wrong source type")
 	ErrUnknownState     = errors.New("raft in an unknown state")
 	ErrNotListening     = errors.New("replica is not listening for events")
+	ErrRetries          = errors.New("could not connect after several attempts")
+	ErrNoNetwork        = errors.New("no network specified in the configuration")
 )

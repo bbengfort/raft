@@ -8,12 +8,12 @@ import (
 )
 
 // NewLog creates and initializes a new log whose first entry is the NullEntry.
-func NewLog(actor Actor) *Log {
+func NewLog(sm StateMachine) *Log {
 	entries := make([]*pb.LogEntry, 1)
 	entries[0] = pb.NullEntry
 
 	return &Log{
-		actor:   actor,
+		sm:      sm,
 		entries: entries,
 		created: time.Now(),
 		updated: time.Now(),
@@ -37,7 +37,7 @@ func NewLog(actor Actor) *Log {
 // from multiple go routines. Instead the log should be maintained by a single
 // state machine that updates it sequentially when events occur.
 type Log struct {
-	actor       Actor          // The actor to dispatch events for
+	sm          StateMachine   // The state machine to dispatch events for
 	lastApplied uint64         // The index of the last applied log entry
 	commitIndex uint64         // The index of the last committed log entry
 	entries     []*pb.LogEntry // In-memory array of log entries
@@ -169,11 +169,9 @@ func (l *Log) Commit(index uint64) error {
 
 	// Create a commit event for all entries now committed
 	for i := l.commitIndex + 1; i <= index; i++ {
-		go l.actor.Dispatch(&event{
-			etype:  CommitEvent,
-			source: l,
-			value:  l.entries[i],
-		})
+		if err := l.sm.CommitEntry(l.entries[i]); err != nil {
+			return err
+		}
 	}
 
 	// Update the commit index and the log
@@ -213,11 +211,9 @@ func (l *Log) Truncate(index, term uint64) error {
 	if index < l.lastApplied {
 		// Drop all entries that appear after the index
 		for _, droppedEntry := range l.entries[nextIndex:] {
-			go l.actor.Dispatch(&event{
-				etype:  DropEvent,
-				source: l,
-				value:  droppedEntry,
-			})
+			if err := l.sm.DropEntry(droppedEntry); err != nil {
+				return err
+			}
 		}
 
 		// Update the entries and meta data

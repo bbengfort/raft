@@ -16,9 +16,10 @@ type Replica struct {
 	peers.Peer
 
 	// Network Defintion
-	config  *Config            // configuration values
-	events  chan Event         // event handler channel
-	remotes map[string]*Remote // remote peers on the network
+	config  *Config                         // configuration values
+	events  chan Event                      // event handler channel
+	remotes map[string]*Remote              // remote peers on the network
+	clients map[uint64]chan *pb.CommitReply // Respond to clients on commit/drop
 
 	// Consensus State
 	state    State     // the current behavior of the local replica
@@ -91,6 +92,8 @@ func (r *Replica) Handle(e Event) error {
 		return r.onHeartbeatTimeout(e)
 	case ElectionTimeout:
 		return r.onElectionTimeout(e)
+	case CommitRequestEvent:
+		return r.onCommitRequest(e)
 	case VoteRequestEvent:
 		return r.onVoteRequest(e)
 	case VoteReplyEvent:
@@ -99,6 +102,12 @@ func (r *Replica) Handle(e Event) error {
 		return r.onAppendRequest(e)
 	case AppendReplyEvent:
 		return r.onAppendReply(e)
+	case ErrorEvent:
+		return e.Value().(error)
+	case CommitEvent:
+		return nil
+	case DropEvent:
+		return nil
 	default:
 		return fmt.Errorf("no handler identified for event %s", e.Type())
 	}
@@ -147,5 +156,44 @@ func (r *Replica) CheckCommits() error {
 
 	}
 
+	return nil
+}
+
+// CommitEntry responds to the client with a successful entry commit.
+func (r *Replica) CommitEntry(entry *pb.LogEntry) error {
+	debug("commit entry %d in term %d", entry.Index, entry.Term)
+
+	client, ok := r.clients[entry.Index]
+	if !ok {
+		// Entry committed at follower that is not responding to clients.
+		return nil
+	}
+
+	client <- &pb.CommitReply{
+		Success: true, Entry: entry, Redirect: "", Error: "",
+	}
+
+	// Ensure the map is cleaned up after response!
+	delete(r.clients, entry.Index)
+	return nil
+}
+
+// DropEntry responds to the client of an unsuccessful commit.
+func (r *Replica) DropEntry(entry *pb.LogEntry) error {
+	debug("drop entry %d in term %d", entry.Index, entry.Term)
+
+	client, ok := r.clients[entry.Index]
+	if !ok {
+		// Entry committed at follower that is not responding to clients.
+		return nil
+	}
+
+	err := fmt.Sprintf("entry could not be committed in term %d", entry.Term)
+	client <- &pb.CommitReply{
+		Success: false, Entry: nil, Redirect: "", Error: err,
+	}
+
+	// Ensure the map is cleaned up after response!
+	delete(r.clients, entry.Index)
 	return nil
 }

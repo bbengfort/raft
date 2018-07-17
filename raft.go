@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/bbengfort/raft/pb"
 	"github.com/bbengfort/x/noplog"
 	"google.golang.org/grpc/grpclog"
 )
@@ -32,6 +33,13 @@ func init() {
 
 	// Stop the grpc verbose logging
 	grpclog.SetLogger(noplog.New())
+}
+
+// StateMachine implements a handler for applying commands when they are
+// committed or for dropping commands if they are truncated from the log.
+type StateMachine interface {
+	CommitEntry(entry *pb.LogEntry) error
+	DropEntry(entry *pb.LogEntry) error
 }
 
 //===========================================================================
@@ -63,6 +71,7 @@ func New(options *Config) (replica *Replica, err error) {
 	replica = new(Replica)
 	replica.config = config
 	replica.remotes = make(map[string]*Remote)
+	replica.clients = make(map[uint64]chan *pb.CommitReply)
 	replica.log = NewLog(replica)
 
 	// Create the local replica definition

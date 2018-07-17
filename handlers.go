@@ -16,6 +16,47 @@ func (r *Replica) onElectionTimeout(e Event) error {
 	return nil
 }
 
+func (r *Replica) onCommitRequest(e Event) (err error) {
+	var (
+		ok    bool
+		req   *pb.CommitRequest
+		con   chan *pb.CommitReply
+		entry *pb.LogEntry
+	)
+
+	if con, ok = e.Source().(chan *pb.CommitReply); !ok {
+		return ErrEventSourceError
+	}
+
+	// If the replica is not the leader, forward to the leader.
+	if r.leader != r.Name {
+		con <- r.makeRedirect()
+		return nil
+	}
+
+	// Otherwise append the entry and send out append entries.
+	if req, ok = e.Value().(*pb.CommitRequest); !ok {
+		return ErrEventTypeError
+	}
+
+	if entry, err = r.log.Create(req.Name, req.Value, r.term); err != nil {
+		return err
+	}
+
+	// Interrupt the heartbeat and send append entries
+	r.ticker.Interrupt(HeartbeatTimeout)
+
+	for _, peer := range r.remotes {
+		if err = peer.AppendEntries(r.leader, r.term, r.log); err != nil {
+			return err
+		}
+	}
+
+	// Tie the entry and the source together so reply is sent on commit/drop.
+	r.clients[entry.Index] = con
+	return nil
+}
+
 func (r *Replica) onVoteRequest(e Event) (err error) {
 	var (
 		ok  bool
@@ -138,7 +179,8 @@ func (r *Replica) onAppendRequest(e Event) error {
 
 	// Determine if we should append entries
 	if err := r.log.Truncate(req.PrevLogIndex, req.PrevLogTerm); err != nil {
-		return err
+		debug(err.Error())
+		return nil
 	}
 
 	// Perform the append entries

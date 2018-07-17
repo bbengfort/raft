@@ -41,6 +41,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/joho/godotenv"
+  packages = ["."]
+  revision = "a79fa1e548e2c689c241d10173efd51e5d689d5b"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/koding/multiconfig"
   packages = ["."]
@@ -89,6 +95,12 @@
   ]
   revision = "62bff4df71bdbc266561a0caee19f0594b17c240"
   version = "v1.4.0"
+
+[[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
 
 [[projects]]
   branch = "master"
@@ -193,6 +205,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "705ad027bb72a93c6ed24754e58f6e4b5224d2ce239b8e4fcebf2c729e969a5d"
+  inputs-digest = "73bf7df3186c6b3eec4b0ab92331d0c70a9a4199eaa7cadd9a8a02f6c5bb06d8"
   solver-name = "gps-cdcl"
   solver-version = 1

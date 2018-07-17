@@ -11,10 +11,15 @@ import (
 	"github.com/bbengfort/raft/pb"
 )
 
+type stateMachine struct{}
+
+func (sm *stateMachine) CommitEntry(entry *pb.LogEntry) error { return nil }
+func (sm *stateMachine) DropEntry(entry *pb.LogEntry) error   { return nil }
+
 var _ = Describe("Log", func() {
 
 	It("should correctly initialize empty log", func() {
-		log := NewLog(NewLocker(func(e Event) error { return nil }))
+		log := NewLog(&stateMachine{})
 
 		Ω(log.LastApplied()).Should(Equal(uint64(0)))
 		Ω(log.CommitIndex()).Should(Equal(uint64(0)))
@@ -29,7 +34,7 @@ var _ = Describe("Log", func() {
 		var log *Log
 
 		BeforeEach(func() {
-			log = NewLog(NewLocker(func(e Event) error { return nil }))
+			log = NewLog(&stateMachine{})
 		})
 
 		Context("when log starts empty", func() {

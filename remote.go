@@ -102,9 +102,9 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 
 		// Log the append entries message
 		if len(entries) > 0 {
-			info("sending %d entries to %s", len(entries), c.Name)
+			debug("sending %d entries to %s", len(entries), c.Name)
 		} else {
-			debug("sending heartbeat to %s", c.Name)
+			trace("sending heartbeat to %s", c.Name)
 		}
 
 		req := &pb.AppendRequest{

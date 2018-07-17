@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/bbengfort/raft"
+	"github.com/bbengfort/raft/pb"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 )
@@ -14,6 +16,7 @@ import (
 var (
 	config  *raft.Config
 	replica *raft.Replica
+	client  *raft.Client
 )
 
 func main() {
@@ -40,6 +43,28 @@ func main() {
 					Name:  "c, config",
 					Usage: "configuration file for replica",
 					Value: "",
+				},
+			},
+		},
+		{
+			Name:     "commit",
+			Usage:    "commit an entry to the distributed log",
+			Before:   initConfig,
+			Action:   commit,
+			Category: "client",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "c, config",
+					Usage: "configuration file for replica",
+					Value: "",
+				},
+				cli.StringFlag{
+					Name:  "k, key",
+					Usage: "the name of the command to commit",
+				},
+				cli.StringFlag{
+					Name:  "v, value",
+					Usage: "the value of the command to commit",
 				},
 			},
 		},
@@ -80,6 +105,25 @@ func serve(c *cli.Context) (err error) {
 	if err = replica.Listen(); err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
+
+	return nil
+}
+
+//===========================================================================
+// Client Commands
+//===========================================================================
+
+func commit(c *cli.Context) (err error) {
+	if client, err = raft.NewClient(config); err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	var entry *pb.LogEntry
+	if entry, err = client.Commit(c.String("key"), []byte(c.String("value"))); err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	fmt.Println(entry)
 
 	return nil
 }
