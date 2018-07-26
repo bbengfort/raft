@@ -5,15 +5,15 @@
 RESULTS="throughput.csv"
 
 RUNS=12
-MIN_CLIENTS=26
-MAX_CLIENTS=38
+MIN_CLIENTS=1
+MAX_CLIENTS=42
 
 # Describe the time format
 TIMEFORMAT="experiment completed in %2lR"
 
 time {
   # Write header to the output file
-  #echo "clients,messages,duration,throughput,version" >> $RESULTS
+  echo "clients,messages,duration,throughput,version" >> $RESULTS
 
   # Run the experiment for each clients $RUNS times
   for (( I=0; I<=$RUNS; I+=1 )); do

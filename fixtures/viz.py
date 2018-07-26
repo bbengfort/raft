@@ -54,7 +54,7 @@ def draw_line_benchmark(df, ax):
     ax.set_xlim(1, max_clients)
     ax.set_ylabel("throughput (requests/second)")
     ax.set_xlabel("concurrent clients")
-    ax.set_title("Ipseity Benchmark")
+    ax.set_title("Raft Benchmark")
     ax.legend(frameon=True)
     return ax
 
@@ -63,7 +63,7 @@ def draw_bar_benchmark(df, ax):
     g = sns.barplot('clients', 'throughput', hue='version', ax=ax, data=df)
     ax.set_ylabel("")
     ax.set_xlabel("concurrent clients")
-    ax.set_title("Ipseity Benchmark")
+    ax.set_title("Raft Benchmark")
     return ax
 
 
