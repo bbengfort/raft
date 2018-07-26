@@ -1,7 +1,7 @@
 {
-  "tick": "1s",
-  "timeout": "400ms",
-  "log_level": 3,
+  "tick": "300ms",
+  "timeout": "100ms",
+  "log_level": 5,
   "peers": [
     {
       "pid": 1,

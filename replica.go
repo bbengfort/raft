@@ -161,7 +161,7 @@ func (r *Replica) CheckCommits() error {
 
 // CommitEntry responds to the client with a successful entry commit.
 func (r *Replica) CommitEntry(entry *pb.LogEntry) error {
-	debug("commit entry %d in term %d", entry.Index, entry.Term)
+	debug("commit entry %d in term %d: applying %s", entry.Index, entry.Term, entry.Name)
 
 	client, ok := r.clients[entry.Index]
 	if !ok {

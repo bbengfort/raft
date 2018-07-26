@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/bbengfort/raft"
 	"github.com/bbengfort/raft/pb"
@@ -44,6 +45,11 @@ func main() {
 					Usage: "configuration file for replica",
 					Value: "",
 				},
+				cli.DurationFlag{
+					Name:  "u, uptime",
+					Usage: "specify a duration for the server to run",
+					Value: 0,
+				},
 			},
 		},
 		{
@@ -55,7 +61,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "c, config",
-					Usage: "configuration file for replica",
+					Usage: "configuration file for network",
 					Value: "",
 				},
 				cli.StringFlag{
@@ -65,6 +71,30 @@ func main() {
 				cli.StringFlag{
 					Name:  "v, value",
 					Usage: "the value of the command to commit",
+				},
+			},
+		},
+		{
+			Name:     "bench",
+			Usage:    "run a raft benchmark with concurrent network",
+			Before:   initConfig,
+			Action:   bench,
+			Category: "client",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "c, config",
+					Usage: "configuration file for replica",
+					Value: "",
+				},
+				cli.IntFlag{
+					Name:  "n, nclients",
+					Usage: "number of concurrent clients to run",
+					Value: 4,
+				},
+				cli.Uint64Flag{
+					Name:  "r, requests",
+					Usage: "number of requests issued per client",
+					Value: 1000,
 				},
 			},
 		},
@@ -102,6 +132,13 @@ func serve(c *cli.Context) (err error) {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
+	// TODO: uptime is only for benchmarking, remove when stable
+	if uptime := c.Duration("uptime"); uptime > 0 {
+		time.AfterFunc(uptime, func() {
+			os.Exit(0)
+		})
+	}
+
 	if err = replica.Listen(); err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -125,5 +162,18 @@ func commit(c *cli.Context) (err error) {
 
 	fmt.Println(entry)
 
+	return nil
+}
+
+func bench(c *cli.Context) error {
+	benchmark, err := raft.NewBenchmark(
+		config, c.Int("nclients"), c.Uint64("requests"),
+	)
+
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	fmt.Println(benchmark)
 	return nil
 }
