@@ -8,5 +8,5 @@ import "vote.proto";
 service Raft {
     rpc Commit (CommitRequest) returns (CommitReply) {}
     rpc RequestVote (VoteRequest) returns (VoteReply) {}
-    rpc AppendEntries (AppendRequest) returns (AppendReply) {}
+    rpc AppendEntries (stream AppendRequest) returns (stream AppendReply) {}
 }

@@ -13,7 +13,9 @@ TIMEFORMAT="experiment completed in %2lR"
 
 time {
   # Write header to the output file
-  echo "clients,messages,duration,throughput,version" >> $RESULTS
+  if [ ! -f $RESULTS ]; then
+    echo "clients,messages,duration,throughput,version" >> $RESULTS
+  fi
 
   # Run the experiment for each clients $RUNS times
   for (( I=0; I<=$RUNS; I+=1 )); do

@@ -30,7 +30,7 @@ const _ = grpc.SupportPackageIsVersion4
 type RaftClient interface {
 	Commit(ctx context.Context, in *CommitRequest, opts ...grpc.CallOption) (*CommitReply, error)
 	RequestVote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*VoteReply, error)
-	AppendEntries(ctx context.Context, in *AppendRequest, opts ...grpc.CallOption) (*AppendReply, error)
+	AppendEntries(ctx context.Context, opts ...grpc.CallOption) (Raft_AppendEntriesClient, error)
 }
 
 type raftClient struct {
@@ -59,13 +59,35 @@ func (c *raftClient) RequestVote(ctx context.Context, in *VoteRequest, opts ...g
 	return out, nil
 }
 
-func (c *raftClient) AppendEntries(ctx context.Context, in *AppendRequest, opts ...grpc.CallOption) (*AppendReply, error) {
-	out := new(AppendReply)
-	err := grpc.Invoke(ctx, "/pb.Raft/AppendEntries", in, out, c.cc, opts...)
+func (c *raftClient) AppendEntries(ctx context.Context, opts ...grpc.CallOption) (Raft_AppendEntriesClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Raft_serviceDesc.Streams[0], c.cc, "/pb.Raft/AppendEntries", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &raftAppendEntriesClient{stream}
+	return x, nil
+}
+
+type Raft_AppendEntriesClient interface {
+	Send(*AppendRequest) error
+	Recv() (*AppendReply, error)
+	grpc.ClientStream
+}
+
+type raftAppendEntriesClient struct {
+	grpc.ClientStream
+}
+
+func (x *raftAppendEntriesClient) Send(m *AppendRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *raftAppendEntriesClient) Recv() (*AppendReply, error) {
+	m := new(AppendReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // Server API for Raft service
@@ -73,7 +95,7 @@ func (c *raftClient) AppendEntries(ctx context.Context, in *AppendRequest, opts 
 type RaftServer interface {
 	Commit(context.Context, *CommitRequest) (*CommitReply, error)
 	RequestVote(context.Context, *VoteRequest) (*VoteReply, error)
-	AppendEntries(context.Context, *AppendRequest) (*AppendReply, error)
+	AppendEntries(Raft_AppendEntriesServer) error
 }
 
 func RegisterRaftServer(s *grpc.Server, srv RaftServer) {
@@ -116,22 +138,30 @@ func _Raft_RequestVote_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Raft_AppendEntries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AppendRequest)
-	if err := dec(in); err != nil {
+func _Raft_AppendEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(RaftServer).AppendEntries(&raftAppendEntriesServer{stream})
+}
+
+type Raft_AppendEntriesServer interface {
+	Send(*AppendReply) error
+	Recv() (*AppendRequest, error)
+	grpc.ServerStream
+}
+
+type raftAppendEntriesServer struct {
+	grpc.ServerStream
+}
+
+func (x *raftAppendEntriesServer) Send(m *AppendReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *raftAppendEntriesServer) Recv() (*AppendRequest, error) {
+	m := new(AppendRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(RaftServer).AppendEntries(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Raft/AppendEntries",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RaftServer).AppendEntries(ctx, req.(*AppendRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 var _Raft_serviceDesc = grpc.ServiceDesc{
@@ -146,28 +176,31 @@ var _Raft_serviceDesc = grpc.ServiceDesc{
 			MethodName: "RequestVote",
 			Handler:    _Raft_RequestVote_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "AppendEntries",
-			Handler:    _Raft_AppendEntries_Handler,
+			StreamName:    "AppendEntries",
+			Handler:       _Raft_AppendEntries_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "service.proto",
 }
 
 func init() { proto.RegisterFile("service.proto", fileDescriptor3) }
 
 var fileDescriptor3 = []byte{
-	// 162 bytes of a gzipped FileDescriptorProto
+	// 166 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0x4e, 0x2d, 0x2a,
 	0xcb, 0x4c, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2a, 0x48, 0x92, 0xe2, 0x49,
 	0x2c, 0x28, 0x48, 0xcd, 0x4b, 0x81, 0x88, 0x48, 0xf1, 0x24, 0xe7, 0x64, 0xa6, 0xe6, 0x95, 0x40,
-	0x79, 0x5c, 0x65, 0xf9, 0x25, 0x50, 0xb5, 0x46, 0xf3, 0x18, 0xb9, 0x58, 0x82, 0x12, 0xd3, 0x4a,
+	0x79, 0x5c, 0x65, 0xf9, 0x25, 0x50, 0xb5, 0x46, 0x8b, 0x18, 0xb9, 0x58, 0x82, 0x12, 0xd3, 0x4a,
 	0x84, 0xf4, 0xb8, 0xd8, 0x9c, 0xf3, 0x73, 0x73, 0x33, 0x4b, 0x84, 0x04, 0xf5, 0x0a, 0x92, 0xf4,
 	0x20, 0xec, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x29, 0x7e, 0x64, 0xa1, 0x82, 0x9c, 0x4a,
 	0x25, 0x06, 0x21, 0x7d, 0x2e, 0x6e, 0xa8, 0x6c, 0x58, 0x7e, 0x49, 0xaa, 0x10, 0x58, 0x05, 0x88,
-	0x05, 0xd3, 0xc2, 0x8b, 0x10, 0x80, 0x68, 0x30, 0xe5, 0xe2, 0x75, 0x04, 0xbb, 0xc9, 0x35, 0xaf,
-	0xa4, 0x28, 0x33, 0xb5, 0x18, 0x62, 0x0f, 0x44, 0x08, 0xc5, 0x1e, 0x98, 0x10, 0x58, 0x5b, 0x12,
-	0x1b, 0xd8, 0x9d, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xdb, 0xab, 0xcb, 0x52, 0xe4, 0x00,
-	0x00, 0x00,
+	0x05, 0xd3, 0xc2, 0x8b, 0x10, 0x80, 0x68, 0xb0, 0xe4, 0xe2, 0x75, 0x04, 0xbb, 0xc9, 0x35, 0xaf,
+	0xa4, 0x28, 0x33, 0xb5, 0x18, 0x62, 0x0f, 0x44, 0x08, 0xc5, 0x1e, 0x98, 0x10, 0x58, 0x9b, 0x06,
+	0xa3, 0x01, 0x63, 0x12, 0x1b, 0xd8, 0xad, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf2, 0x4a,
+	0x35, 0x4e, 0xe8, 0x00, 0x00, 0x00,
 }

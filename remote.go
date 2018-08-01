@@ -3,6 +3,7 @@ package raft
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/bbengfort/raft/pb"
@@ -14,13 +15,14 @@ import (
 type Remote struct {
 	peers.Peer
 
-	actor      Actor            // the listener to dispatch events to
-	timeout    time.Duration    // timeout before dropping message
-	conn       *grpc.ClientConn // grpc dial connection to the remote
-	client     pb.RaftClient    // rpc client specified by protobuf
-	online     bool             // if the client is connected or not
-	nextIndex  uint64           // local state of the remote's next log index
-	matchIndex uint64           // local state of the remote's commit index
+	actor      Actor                       // the listener to dispatch events to
+	timeout    time.Duration               // timeout before dropping message
+	conn       *grpc.ClientConn            // grpc dial connection to the remote
+	client     pb.RaftClient               // rpc client specified by protobuf
+	stream     pb.Raft_AppendEntriesClient // Append Entries stream
+	online     bool                        // if the client is connected or not
+	nextIndex  uint64                      // local state of the remote's next log index
+	matchIndex uint64                      // local state of the remote's commit index
 }
 
 // NewRemote creates a new remote associated with the replica.
@@ -116,21 +118,19 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 			Entries:      entries,
 		}
 
-		rep, err := c.send(func(ctx context.Context) (interface{}, error) {
-			return c.client.AppendEntries(ctx, req)
-		})
-
-		if err != nil {
-			// errors are not fatal, just go offline
-			return
+		// If we're not online, attempt to connect
+		if !c.online {
+			if err := c.Reset(); err != nil {
+				caution(err.Error())
+				return
+			}
 		}
-
-		// Dispatch the vote reply event
-		c.actor.Dispatch(&event{
-			etype:  AppendReplyEvent,
-			source: c,
-			value:  rep,
-		})
+		if c.stream != nil {
+			if err := c.stream.Send(req); err != nil {
+				// errors are not fatal, just go offline
+				return
+			}
+		}
 	}()
 
 	return nil
@@ -151,6 +151,14 @@ func (c *Remote) Connect() (err error) {
 
 	// NOTE: do not set online to true until after a response from remote.
 	c.client = pb.NewRaftClient(c.conn)
+
+	// Create the append entries stream
+	if c.stream, err = c.client.AppendEntries(context.Background()); err != nil {
+		return fmt.Errorf("could not create append entries stream to '%s': %s", addr, err.Error())
+	}
+
+	// Run the stream event dispatcher
+	go c.streamListener()
 	return nil
 }
 
@@ -161,8 +169,15 @@ func (c *Remote) Close() (err error) {
 	defer func() {
 		c.conn = nil
 		c.client = nil
+		c.stream = nil
 		c.online = false
 	}()
+
+	if c.stream != nil {
+		if err = c.stream.CloseSend(); err != nil {
+			return fmt.Errorf("could not close stream to %s: %s", c.Name, err)
+		}
+	}
 
 	// Don't cause any panics if already closed
 	if c.conn == nil {
@@ -251,4 +266,44 @@ func (c *Remote) error(err error) {
 			value:  err,
 		})
 	}()
+}
+
+func (c *Remote) streamListener() {
+	var (
+		rep *pb.AppendReply
+		err error
+	)
+
+	for {
+		if c.stream == nil {
+			return
+		}
+		if rep, err = c.stream.Recv(); err != nil {
+			if err != io.EOF {
+				caution(err.Error())
+			} else {
+				caution("stream to %s closed by remote", c.Name)
+			}
+
+			if c.online {
+				// We were online and now we're offline
+				info("grpc connection to %s (%s) is offline", c.Name, c.Endpoint(false))
+			}
+			c.online = false
+			return
+		}
+
+		if !c.online {
+			// We were offline and now we're online
+			info("grpc connection to %s (%s) is online", c.Name, c.Endpoint(false))
+			c.online = true
+		}
+
+		// Dispatch the append reply event
+		c.actor.Dispatch(&event{
+			etype:  AppendReplyEvent,
+			source: c,
+			value:  rep,
+		})
+	}
 }

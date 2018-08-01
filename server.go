@@ -2,6 +2,7 @@ package raft
 
 import (
 	"context"
+	"io"
 
 	"github.com/bbengfort/raft/pb"
 )
@@ -60,20 +61,39 @@ func (r *Replica) RequestVote(ctx context.Context, in *pb.VoteRequest) (*pb.Vote
 }
 
 // AppendEntries from leader for either heartbeat or consensus.
-func (r *Replica) AppendEntries(ctx context.Context, in *pb.AppendRequest) (*pb.AppendReply, error) {
-	// Create a channel to wait for event handler on.
-	source := make(chan *pb.AppendReply, 1)
+func (r *Replica) AppendEntries(stream pb.Raft_AppendEntriesServer) (err error) {
 
-	// Dispatch the event received and wait for it to be handled
-	event := &event{
-		etype:  AppendRequestEvent,
-		source: source,
-		value:  in,
-	}
-	if err := r.Dispatch(event); err != nil {
-		return nil, err
-	}
+	// Keep receiving messages on the stream and sending replies after each
+	// message is sent on the stream.
+	for {
+		var in *pb.AppendRequest
+		if in, err = stream.Recv(); err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
 
-	out := <-source
-	return out, nil
+		// Create a channel to wait for event handler on.
+		source := make(chan *pb.AppendReply, 1)
+
+		// Dispatch the event received and wait for it to be handled
+		event := &event{
+			etype:  AppendRequestEvent,
+			source: source,
+			value:  in,
+		}
+		if err := r.Dispatch(event); err != nil {
+			return err
+		}
+
+		// Wait for the event to be handled before receiving the next
+		// message on the stream; this ensures that the order of messages
+		// received matches the order of replies sent.
+		out := <-source
+		if err = stream.Send(out); err != nil {
+			return err
+		}
+
+	}
 }
