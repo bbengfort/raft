@@ -6,19 +6,22 @@
     {
       "pid": 1,
       "name": "alpha",
-      "addr": "localhost",
+      "ip_address": "127.0.0.1",
+      "domain": "localhost",
       "port": 3264
     },
     {
       "pid": 2,
       "name": "bravo",
-      "addr": "localhost",
+      "ip_address": "127.0.0.1",
+      "domain": "localhost",
       "port": 3265
     },
     {
       "pid": 3,
       "name": "charlie",
-      "addr": "localhost",
+      "ip_address": "127.0.0.1",
+      "domain": "localhost",
       "port": 3266
     }
   ]

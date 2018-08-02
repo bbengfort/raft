@@ -104,13 +104,12 @@ func (c *Config) Update(o *Config) error {
 
 // GetName returns the name of the local host defined by the configuration or
 // using the hostname by default.
-func (c *Config) GetName() (string, error) {
+func (c *Config) GetName() (name string, err error) {
 	if c.Name == "" {
-		hostname, err := os.Hostname()
-		if err != nil {
-			return "", errors.New("could not look up hostname to find peer")
+		if name, err = os.Hostname(); err != nil {
+			return "", errors.New("could not find  unique name of localhost")
 		}
-		return hostname, nil
+		return name, nil
 	}
 
 	return c.Name, nil
@@ -131,22 +130,24 @@ func (c *Config) GetPeer() (peers.Peer, error) {
 		}
 	}
 
-	return peers.Peer{}, fmt.Errorf("could not find peer for '%s'", c.Name)
+	return peers.Peer{}, fmt.Errorf("could not find peer for '%s'", local)
 }
 
 // GetRemotes returns all peer configurations for remote hosts on the network,
 // e.g. by excluding the local peer configuration.
-func (c *Config) GetRemotes() ([]peers.Peer, error) {
-	local, err := c.GetName()
-	if err != nil {
+func (c *Config) GetRemotes() (remotes []peers.Peer, err error) {
+	var local string
+	if local, err = c.GetName(); err != nil {
 		return nil, err
 	}
-	remotes := make([]peers.Peer, 0, len(c.Peers)-1)
+
+	remotes = make([]peers.Peer, 0, len(c.Peers)-1)
 
 	for _, peer := range c.Peers {
 		if local == peer.Name {
 			continue
 		}
+		remotes = append(remotes, peer)
 	}
 
 	return remotes, nil

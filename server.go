@@ -83,7 +83,7 @@ func (r *Replica) AppendEntries(stream pb.Raft_AppendEntriesServer) (err error) 
 			source: source,
 			value:  in,
 		}
-		if err := r.Dispatch(event); err != nil {
+		if err = r.Dispatch(event); err != nil {
 			return err
 		}
 

@@ -143,7 +143,7 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 // Connect to the remote using the specified timeout. Connect is usually not
 // explicitly called, but is instead connected when a message is sent.
 func (c *Remote) Connect() (err error) {
-	addr := c.Endpoint(false)
+	addr := c.Endpoint(true)
 
 	if c.conn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(c.timeout)); err != nil {
 		return fmt.Errorf("could not connect to '%s': %s", addr, err.Error())
