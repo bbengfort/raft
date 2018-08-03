@@ -111,6 +111,11 @@ func main() {
 					Usage: "write metrics to specified path",
 					Value: "",
 				},
+				cli.DurationFlag{
+					Name:  "d, delay",
+					Usage: "wait specified time before starting benchmark",
+					Value: 0,
+				},
 			},
 		},
 	}
@@ -196,6 +201,10 @@ func commit(c *cli.Context) (err error) {
 }
 
 func bench(c *cli.Context) error {
+	if delay := c.Duration("delay"); delay > 0 {
+		time.Sleep(delay)
+	}
+
 	benchmark, err := raft.NewBenchmark(
 		config, c.Int("nclients"), c.Uint64("requests"),
 	)
