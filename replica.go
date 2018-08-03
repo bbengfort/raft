@@ -37,7 +37,7 @@ type Replica struct {
 // Listen for messages from peers and clients and run the event loop.
 func (r *Replica) Listen() error {
 	// Open TCP socket to listen for messages
-	addr := r.Endpoint(false)
+	addr := fmt.Sprintf(":%d", r.Port)
 	sock, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("could not listen on %s", addr)

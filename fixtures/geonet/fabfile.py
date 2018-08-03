@@ -165,9 +165,7 @@ def cleanup():
     """
     Cleans up results files so that the experiment can be run again.
     """
-    names = (
-        "metrics.json", "visibile_versions.log",
-    )
+    names = ("metrics.json", )
 
     for name in names:
         path = os.path.join(workspace, name)
@@ -183,11 +181,12 @@ def serve():
 
 @task
 @parallel
-def bench(config="config.json"):
+def bench(config, clients):
     """
     Run all servers on the host as well as benchmarks for the number of
     clients specified.
     """
+    name = addrs[env.host]
     command = []
 
     # load the configuration
@@ -195,14 +194,19 @@ def bench(config="config.json"):
         config = json.load(f)
 
     # Create the serve command
-    args = make_replica_args(config, env.host)
-    if args:
+    peers = set(peer["name"] for peer in config["peers"])
+    if name in peers:
+        args = make_args(c="config.json", o="metrics.json", u="1m", n=name)
         command.append("raft serve {}".format(args))
 
-    # Create the bench command
-    args = make_client_args(config, env.host)
-    for arg in args:
-        command.append("raft bench {}".format(arg))
+    # Create the benchmark command
+    n = round_robin(int(clients), env.host)
+    if n > 0:
+        args = make_args(c="config.json", n=n, r=10000, o="metrics.json")
+        command.append("raft bench {}".format(args))
+
+    if len(command) == 0:
+        return
 
     with cd(workspace):
         run(pproc_command(command))
@@ -260,3 +264,23 @@ def unique_name(path, start=0, maxtries=1000):
     raise ValueError(
         "could not get a unique path after {} tries".format(maxtries)
     )
+
+
+def round_robin(n, host, hosts=list(addrs)):
+    """
+    Returns a number n (of clients) for the specified host, by allocating the
+    n clients evenly in a round robin fashion. For example, if hosts = 3 and
+    n = 5; then this function returns 2 for host[0], 2 for host[1] and 1 for
+    host[2].
+    """
+    num = n / len(hosts)
+    idx = hosts.index(host)
+    if n % len(hosts) > 0 and idx < (n % len(hosts)):
+        num += 1
+    return num
+
+
+def make_args(**kwargs):
+    return " ".join([
+        "-{} {}".format(key, val) for key, val in kwargs.items()
+    ])
