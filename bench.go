@@ -10,11 +10,11 @@ import (
 
 // NewBenchmark creates a benchmark with the specified number of clients and
 // requests per client, then executes the benchjmark against the quorum.
-func NewBenchmark(options *Config, nclients int, requestsPerClient uint64) (*Benchmark, error) {
+func NewBenchmark(options *Config, nclients int, requestsPerClient uint64, streaming bool) (*Benchmark, error) {
 	benchmark := &Benchmark{
 		config: options, nClients: nclients, requests: requestsPerClient,
 	}
-	if err := benchmark.Run(); err != nil {
+	if err := benchmark.Run(streaming); err != nil {
 		return nil, err
 	}
 	return benchmark, nil
@@ -36,7 +36,7 @@ type Benchmark struct {
 // the clients to execute requests against the quorum. An error is returned
 // if both duration and commits are set to 0 (e.g. no benchmark mode is
 // specified) or if the benchmark has already been executed.
-func (b *Benchmark) Run() error {
+func (b *Benchmark) Run(streaming bool) error {
 	group := new(errgroup.Group)
 
 	start := time.Now()
@@ -44,13 +44,13 @@ func (b *Benchmark) Run() error {
 		group.Go(func() (err error) {
 
 			var (
-				client *Client
+				client CommitClient
 				key    string
 				val    []byte
 			)
 
 			// Create the client to execute the requests
-			if client, err = NewClient(b.config); err != nil {
+			if client, err = NewClient(b.config, streaming); err != nil {
 				return err
 			}
 

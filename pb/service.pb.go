@@ -29,6 +29,7 @@ const _ = grpc.SupportPackageIsVersion4
 
 type RaftClient interface {
 	Commit(ctx context.Context, in *CommitRequest, opts ...grpc.CallOption) (*CommitReply, error)
+	CommitStream(ctx context.Context, opts ...grpc.CallOption) (Raft_CommitStreamClient, error)
 	RequestVote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*VoteReply, error)
 	AppendEntries(ctx context.Context, opts ...grpc.CallOption) (Raft_AppendEntriesClient, error)
 }
@@ -50,6 +51,37 @@ func (c *raftClient) Commit(ctx context.Context, in *CommitRequest, opts ...grpc
 	return out, nil
 }
 
+func (c *raftClient) CommitStream(ctx context.Context, opts ...grpc.CallOption) (Raft_CommitStreamClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Raft_serviceDesc.Streams[0], c.cc, "/pb.Raft/CommitStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &raftCommitStreamClient{stream}
+	return x, nil
+}
+
+type Raft_CommitStreamClient interface {
+	Send(*CommitRequest) error
+	Recv() (*CommitReply, error)
+	grpc.ClientStream
+}
+
+type raftCommitStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *raftCommitStreamClient) Send(m *CommitRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *raftCommitStreamClient) Recv() (*CommitReply, error) {
+	m := new(CommitReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *raftClient) RequestVote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*VoteReply, error) {
 	out := new(VoteReply)
 	err := grpc.Invoke(ctx, "/pb.Raft/RequestVote", in, out, c.cc, opts...)
@@ -60,7 +92,7 @@ func (c *raftClient) RequestVote(ctx context.Context, in *VoteRequest, opts ...g
 }
 
 func (c *raftClient) AppendEntries(ctx context.Context, opts ...grpc.CallOption) (Raft_AppendEntriesClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Raft_serviceDesc.Streams[0], c.cc, "/pb.Raft/AppendEntries", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_Raft_serviceDesc.Streams[1], c.cc, "/pb.Raft/AppendEntries", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +126,7 @@ func (x *raftAppendEntriesClient) Recv() (*AppendReply, error) {
 
 type RaftServer interface {
 	Commit(context.Context, *CommitRequest) (*CommitReply, error)
+	CommitStream(Raft_CommitStreamServer) error
 	RequestVote(context.Context, *VoteRequest) (*VoteReply, error)
 	AppendEntries(Raft_AppendEntriesServer) error
 }
@@ -118,6 +151,32 @@ func _Raft_Commit_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		return srv.(RaftServer).Commit(ctx, req.(*CommitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _Raft_CommitStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(RaftServer).CommitStream(&raftCommitStreamServer{stream})
+}
+
+type Raft_CommitStreamServer interface {
+	Send(*CommitReply) error
+	Recv() (*CommitRequest, error)
+	grpc.ServerStream
+}
+
+type raftCommitStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *raftCommitStreamServer) Send(m *CommitReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *raftCommitStreamServer) Recv() (*CommitRequest, error) {
+	m := new(CommitRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func _Raft_RequestVote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -179,6 +238,12 @@ var _Raft_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
+			StreamName:    "CommitStream",
+			Handler:       _Raft_CommitStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
 			StreamName:    "AppendEntries",
 			Handler:       _Raft_AppendEntries_Handler,
 			ServerStreams: true,
@@ -191,16 +256,17 @@ var _Raft_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("service.proto", fileDescriptor3) }
 
 var fileDescriptor3 = []byte{
-	// 166 bytes of a gzipped FileDescriptorProto
+	// 180 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0x4e, 0x2d, 0x2a,
 	0xcb, 0x4c, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2a, 0x48, 0x92, 0xe2, 0x49,
 	0x2c, 0x28, 0x48, 0xcd, 0x4b, 0x81, 0x88, 0x48, 0xf1, 0x24, 0xe7, 0x64, 0xa6, 0xe6, 0x95, 0x40,
-	0x79, 0x5c, 0x65, 0xf9, 0x25, 0x50, 0xb5, 0x46, 0x8b, 0x18, 0xb9, 0x58, 0x82, 0x12, 0xd3, 0x4a,
+	0x79, 0x5c, 0x65, 0xf9, 0x25, 0x50, 0xb5, 0x46, 0x77, 0x18, 0xb9, 0x58, 0x82, 0x12, 0xd3, 0x4a,
 	0x84, 0xf4, 0xb8, 0xd8, 0x9c, 0xf3, 0x73, 0x73, 0x33, 0x4b, 0x84, 0x04, 0xf5, 0x0a, 0x92, 0xf4,
 	0x20, 0xec, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x29, 0x7e, 0x64, 0xa1, 0x82, 0x9c, 0x4a,
-	0x25, 0x06, 0x21, 0x7d, 0x2e, 0x6e, 0xa8, 0x6c, 0x58, 0x7e, 0x49, 0xaa, 0x10, 0x58, 0x05, 0x88,
-	0x05, 0xd3, 0xc2, 0x8b, 0x10, 0x80, 0x68, 0xb0, 0xe4, 0xe2, 0x75, 0x04, 0xbb, 0xc9, 0x35, 0xaf,
-	0xa4, 0x28, 0x33, 0xb5, 0x18, 0x62, 0x0f, 0x44, 0x08, 0xc5, 0x1e, 0x98, 0x10, 0x58, 0x9b, 0x06,
-	0xa3, 0x01, 0x63, 0x12, 0x1b, 0xd8, 0xad, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf2, 0x4a,
-	0x35, 0x4e, 0xe8, 0x00, 0x00, 0x00,
+	0x25, 0x06, 0x21, 0x0b, 0x2e, 0x1e, 0x88, 0x40, 0x70, 0x49, 0x51, 0x6a, 0x62, 0x2e, 0x71, 0xba,
+	0x34, 0x18, 0x0d, 0x18, 0x85, 0xf4, 0xb9, 0xb8, 0xa1, 0x2a, 0xc2, 0xf2, 0x4b, 0x52, 0x85, 0xc0,
+	0xaa, 0x40, 0x2c, 0x98, 0x36, 0x5e, 0x84, 0x00, 0xc4, 0x2a, 0x4b, 0x2e, 0x5e, 0x47, 0xb0, 0x6f,
+	0x5c, 0xf3, 0x4a, 0x8a, 0x32, 0x53, 0x8b, 0x21, 0x76, 0x41, 0x84, 0x50, 0xec, 0x82, 0x09, 0xc1,
+	0xed, 0x4a, 0x62, 0x03, 0xfb, 0xd2, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xde, 0xae, 0xe6, 0x83,
+	0x22, 0x01, 0x00, 0x00,
 }

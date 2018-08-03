@@ -17,7 +17,7 @@ import (
 var (
 	config  *raft.Config
 	replica *raft.Replica
-	client  *raft.Client
+	client  raft.CommitClient
 )
 
 func main() {
@@ -96,6 +96,10 @@ func main() {
 					Usage: "number of requests issued per client",
 					Value: 1000,
 				},
+				cli.BoolTFlag{
+					Name:  "s, streaming",
+					Usage: "run the streaming client vs. unary client",
+				},
 			},
 		},
 	}
@@ -151,7 +155,7 @@ func serve(c *cli.Context) (err error) {
 //===========================================================================
 
 func commit(c *cli.Context) (err error) {
-	if client, err = raft.NewClient(config); err != nil {
+	if client, err = raft.NewClient(config, false); err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
@@ -167,7 +171,7 @@ func commit(c *cli.Context) (err error) {
 
 func bench(c *cli.Context) error {
 	benchmark, err := raft.NewBenchmark(
-		config, c.Int("nclients"), c.Uint64("requests"),
+		config, c.Int("nclients"), c.Uint64("requests"), c.BoolT("streaming"),
 	)
 
 	if err != nil {

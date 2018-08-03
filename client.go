@@ -15,29 +15,39 @@ import (
 // DefaultRetries specifies the number of times to attempt a commit.
 const DefaultRetries = 3
 
+// CommitClient is an interface for both unary and streaming rpc client types.
+type CommitClient interface {
+	Commit(name string, value []byte) (entry *pb.LogEntry, err error)
+}
+
 // NewClient creates a new raft client to conect to a quorum.
-func NewClient(options *Config) (client *Client, err error) {
+func NewClient(options *Config, streaming bool) (CommitClient, error) {
 	// Create a new configuration from defaults, configuration file, and the
 	// environment; verify it returning any errors.
 	config := new(Config)
-	if err = config.Load(); err != nil {
+	if err := config.Load(); err != nil {
 		return nil, err
 	}
 
 	// Update the configuration with the passed in options
-	if err = config.Update(options); err != nil {
+	if err := config.Update(options); err != nil {
 		return nil, err
 	}
 
-	// Create the client
-	client = &Client{config: config}
-
 	// Compute the identity
+	var identity string
 	hostname, _ := config.GetName()
 	if hostname != "" {
-		client.identity = fmt.Sprintf("%s-%04X", hostname, rand.Intn(0x10000))
+		identity = fmt.Sprintf("%s-%04X", hostname, rand.Intn(0x10000))
 	} else {
-		client.identity = fmt.Sprintf("%04X-%04X", rand.Intn(0x10000), rand.Intn(0x10000))
+		identity = fmt.Sprintf("%04X-%04X", rand.Intn(0x10000), rand.Intn(0x10000))
+	}
+
+	var client CommitClient
+	if streaming {
+		client = &Client{config: config, identity: identity}
+	} else {
+		client = &StreamingClient{Client: Client{config: config, identity: identity}}
 	}
 
 	return client, nil
@@ -131,11 +141,11 @@ func (c *Client) close() error {
 		c.client = nil
 	}()
 
-	if c.conn == nil {
-		return nil
+	if c.conn != nil {
+		return c.conn.Close()
 	}
 
-	return c.conn.Close()
+	return nil
 }
 
 // Connect to the remote using the specified timeout. If a remote is not
@@ -193,4 +203,103 @@ func (c *Client) selectRemote(remote string) (*peers.Peer, error) {
 	}
 
 	return nil, fmt.Errorf("could not find remote '%s' in configuration", remote)
+}
+
+//===========================================================================
+// Streaming Client
+//===========================================================================
+
+// StreamingClient implements the ClientStream RPC to the Raft service.
+type StreamingClient struct {
+	Client
+	stream pb.Raft_CommitStreamClient
+}
+
+// Commit a name and value to the distributed log.
+func (c *StreamingClient) Commit(name string, value []byte) (entry *pb.LogEntry, err error) {
+	// Create the request
+	req := &pb.CommitRequest{Identity: c.identity, Name: name, Value: value}
+
+	// Send the request
+	rep, err := c.send(req, DefaultRetries)
+	if err != nil {
+		return nil, err
+	}
+
+	return rep.Entry, nil
+}
+
+// Send the commit request on the stream, handling redirects and outages for
+// the maximum number of tries. Implements ping-pong streming, sends and waits
+// for a response from the server.
+func (c *StreamingClient) send(req *pb.CommitRequest, retries int) (*pb.CommitReply, error) {
+	// Don't attempt if there are no more retries.
+	if retries <= 0 {
+		return nil, ErrRetries
+	}
+
+	// Connect if not connected
+	if !c.isConnected() {
+		if err := c.connect(""); err != nil {
+			return nil, err
+		}
+	}
+
+	// Send the message on the stream
+	if err := c.stream.Send(req); err != nil {
+		// try again with a different host until retries are exhausted
+		c.close()
+		return c.send(req, retries-1)
+	}
+
+	// Listen for a reply on the stream
+	rep, err := c.stream.Recv()
+	if err != nil {
+		// try again with a different host until retries are exhausted
+		c.close()
+		return c.send(req, retries-1)
+	}
+
+	if !rep.Success {
+		if rep.Redirect != "" {
+			// Redirect to the specified leader.
+			if err := c.connect(rep.Redirect); err != nil {
+				return nil, err
+			}
+			return c.send(req, retries-1)
+		}
+		return nil, errors.New(rep.Error)
+	}
+
+	return rep, nil
+}
+
+// Connect the client then the stream
+func (c *StreamingClient) connect(remote string) (err error) {
+	if err = c.Client.connect(remote); err != nil {
+		return err
+	}
+
+	c.stream, err = c.client.CommitStream(context.Background())
+	return err
+}
+
+// Close the stream and the client connection
+func (c *StreamingClient) close() (err error) {
+	defer func() {
+		c.stream = nil
+	}()
+
+	if c.stream != nil {
+		if err = c.stream.CloseSend(); err != nil {
+			return err
+		}
+	}
+
+	return c.Client.close()
+}
+
+// Returns true if a client, connection, and a stream exist
+func (c *StreamingClient) isConnected() bool {
+	return c.client != nil && c.conn != nil && c.stream != nil
 }
