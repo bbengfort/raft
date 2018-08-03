@@ -45,10 +45,20 @@ func main() {
 					Usage: "configuration file for replica",
 					Value: "",
 				},
+				cli.StringFlag{
+					Name:  "n, name",
+					Usage: "unique name of the replica instance",
+					Value: "",
+				},
 				cli.DurationFlag{
 					Name:  "u, uptime",
 					Usage: "specify a duration for the server to run",
 					Value: 0,
+				},
+				cli.StringFlag{
+					Name:  "o, outpath",
+					Usage: "write metrics to specified path",
+					Value: "",
 				},
 			},
 		},
@@ -96,6 +106,11 @@ func main() {
 					Usage: "number of requests issued per client",
 					Value: 1000,
 				},
+				cli.StringFlag{
+					Name:  "o, outpath",
+					Usage: "write metrics to specified path",
+					Value: "",
+				},
 			},
 		},
 	}
@@ -128,6 +143,10 @@ func initConfig(c *cli.Context) (err error) {
 
 func serve(c *cli.Context) (err error) {
 
+	if name := c.String("name"); name != "" {
+		config.Name = name
+	}
+
 	if replica, err = raft.New(config); err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -135,6 +154,17 @@ func serve(c *cli.Context) (err error) {
 	// TODO: uptime is only for benchmarking, remove when stable
 	if uptime := c.Duration("uptime"); uptime > 0 {
 		time.AfterFunc(uptime, func() {
+			if path := c.String("outpath"); path != "" {
+				extra := make(map[string]interface{})
+				extra["replica"] = replica.Name
+				extra["quorum"] = len(config.Peers)
+				extra["version"] = raft.PackageVersion
+
+				if err = replica.Metrics.Dump(path, extra); err != nil {
+					fmt.Println(err.Error())
+					os.Exit(1)
+				}
+			}
 			os.Exit(0)
 		})
 	}
@@ -172,6 +202,12 @@ func bench(c *cli.Context) error {
 
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
+	}
+
+	if path := c.String("outpath"); path != "" {
+		if err := benchmark.Dump(path); err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
 	}
 
 	fmt.Println(benchmark)

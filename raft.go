@@ -19,7 +19,7 @@ import (
 //===========================================================================
 
 // PackageVersion of the current Raft implementation
-const PackageVersion = "0.2"
+const PackageVersion = "0.3"
 
 // Initialize the package and random numbers, etc.
 func init() {
@@ -73,6 +73,7 @@ func New(options *Config) (replica *Replica, err error) {
 	replica.remotes = make(map[string]*Remote)
 	replica.clients = make(map[uint64]chan *pb.CommitReply)
 	replica.log = NewLog(replica)
+	replica.Metrics = NewMetrics()
 
 	// Create the local replica definition
 	replica.Peer, err = config.GetPeer()

@@ -15,6 +15,9 @@ import (
 type Replica struct {
 	peers.Peer
 
+	// TODO: remove when stable
+	Metrics *Metrics // keep track of access statistics
+
 	// Network Defintion
 	config  *Config                         // configuration values
 	events  chan Event                      // event handler channel
@@ -173,6 +176,9 @@ func (r *Replica) CommitEntry(entry *pb.LogEntry) error {
 		Success: true, Entry: entry, Redirect: "", Error: "",
 	}
 
+	// Record successful response
+	go func() { r.Metrics.Complete(true) }()
+
 	// Ensure the map is cleaned up after response!
 	delete(r.clients, entry.Index)
 	return nil
@@ -192,6 +198,9 @@ func (r *Replica) DropEntry(entry *pb.LogEntry) error {
 	client <- &pb.CommitReply{
 		Success: false, Entry: nil, Redirect: "", Error: err,
 	}
+
+	// Record dropped response
+	go func() { r.Metrics.Complete(false) }()
 
 	// Ensure the map is cleaned up after response!
 	delete(r.clients, entry.Index)

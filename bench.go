@@ -3,6 +3,7 @@ package raft
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -28,6 +29,7 @@ type Benchmark struct {
 	config   *Config       // The Raft quorum configuration
 	nClients int           // The number of concurrent clients
 	requests uint64        // The total number of successful commits made
+	started  time.Time     // The time the benchmark was started
 	duration time.Duration // The duration of the benchmark period
 
 }
@@ -39,7 +41,7 @@ type Benchmark struct {
 func (b *Benchmark) Run() error {
 	group := new(errgroup.Group)
 
-	start := time.Now()
+	b.started = time.Now()
 	for i := 0; i < b.nClients; i++ {
 		group.Go(func() (err error) {
 
@@ -70,7 +72,7 @@ func (b *Benchmark) Run() error {
 	}
 
 	group.Wait()
-	b.duration = time.Since(start)
+	b.duration = time.Since(b.started)
 	return nil
 }
 
@@ -108,4 +110,20 @@ func (b *Benchmark) String() string {
 		b.Throughput(),
 		PackageVersion,
 	)
+}
+
+// Dump the benchmark in JSONlines format to disk.
+func (b *Benchmark) Dump(path string) error {
+	data := make(map[string]interface{})
+
+	data["metric"] = "client"
+	data["started"] = b.started.Format(time.RFC3339Nano)
+	data["duration"] = b.Duration().String()
+	data["n_clients"] = b.NumClients()
+	data["n_requests"] = b.NumRequests()
+	data["throughput"] = b.Throughput()
+	data["version"] = PackageVersion
+	data["hostname"], _ = os.Hostname()
+
+	return appendJSON(path, data)
 }

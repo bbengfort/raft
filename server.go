@@ -14,6 +14,9 @@ func (r *Replica) Commit(ctx context.Context, in *pb.CommitRequest) (*pb.CommitR
 		return r.makeRedirect(), nil
 	}
 
+	// Record the request
+	go func() { r.Metrics.Request(in.Identity) }()
+
 	// Create a channel to wait for the commit handler
 	source := make(chan *pb.CommitReply, 1)
 
