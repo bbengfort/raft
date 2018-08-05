@@ -162,8 +162,13 @@ func serve(c *cli.Context) (err error) {
 			if path := c.String("outpath"); path != "" {
 				extra := make(map[string]interface{})
 				extra["replica"] = replica.Name
-				extra["quorum"] = len(config.Peers)
 				extra["version"] = raft.PackageVersion
+
+				quorum := make([]string, 0, len(config.Peers))
+				for _, peer := range config.Peers {
+					quorum = append(quorum, peer.Name)
+				}
+				extra["quorum"] = quorum
 
 				if err = replica.Metrics.Dump(path, extra); err != nil {
 					fmt.Println(err.Error())
