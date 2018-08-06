@@ -2,6 +2,7 @@
 *.py[cod]
 __pycache__
 .python-version
+.ipynb_checkpoints
 
 # experimental stuff
 hosts.json
