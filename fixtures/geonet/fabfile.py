@@ -202,7 +202,7 @@ def bench(config, clients):
     # Create the benchmark command
     n = round_robin(int(clients), env.host)
     if n > 0:
-        args = make_args(c="config.json", n=n, r=1000, o="metrics.json", d="20s")
+        args = make_args(c="config.json", n=n, r=5000, o="metrics.json", d="20s")
         command.append("raft bench {}".format(args))
 
     if len(command) == 0:

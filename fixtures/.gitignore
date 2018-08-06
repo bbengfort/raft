@@ -7,3 +7,4 @@ __pycache__
 # experimental stuff
 hosts.json
 geonet/configs/*.json
+metrics.json

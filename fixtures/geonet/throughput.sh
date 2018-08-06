@@ -23,7 +23,7 @@ time {
           fab putconfig:$conf
 
           # Step Four: # Run the throughput benchmark
-          for (( J=1; J<=20; J++ )); do
+          for (( J=1; J<=17; J++ )); do
               fab "bench:$conf,$J"
 
               # Fetch the results and cleanup

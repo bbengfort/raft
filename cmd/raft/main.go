@@ -116,6 +116,10 @@ func main() {
 					Usage: "wait specified time before starting benchmark",
 					Value: 0,
 				},
+				cli.BoolFlag{
+					Name:  "b, blast",
+					Usage: "send all requests per client at once",
+				},
 			},
 		},
 	}
@@ -211,7 +215,7 @@ func bench(c *cli.Context) error {
 	}
 
 	benchmark, err := raft.NewBenchmark(
-		config, c.Int("nclients"), c.Uint64("requests"),
+		config, c.Int("nclients"), c.Uint64("requests"), c.Bool("blast"),
 	)
 
 	if err != nil {

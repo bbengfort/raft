@@ -2,7 +2,6 @@ package raft
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"time"
 
@@ -11,9 +10,9 @@ import (
 
 // NewBenchmark creates a benchmark with the specified number of clients and
 // requests per client, then executes the benchjmark against the quorum.
-func NewBenchmark(options *Config, nclients int, requestsPerClient uint64) (*Benchmark, error) {
+func NewBenchmark(options *Config, nclients int, requestsPerClient uint64, blast bool) (*Benchmark, error) {
 	benchmark := &Benchmark{
-		config: options, nClients: nclients, requests: requestsPerClient,
+		config: options, nClients: nclients, requests: requestsPerClient, blast: blast,
 	}
 	if err := benchmark.Run(); err != nil {
 		return nil, err
@@ -31,7 +30,7 @@ type Benchmark struct {
 	requests uint64        // The total number of successful commits made
 	started  time.Time     // The time the benchmark was started
 	duration time.Duration // The duration of the benchmark period
-
+	blast    bool          // If true, all requests are sent in their own thread
 }
 
 // Run the benchmark in either fixed duration or maximum commits mode; using
@@ -42,33 +41,17 @@ func (b *Benchmark) Run() error {
 	group := new(errgroup.Group)
 
 	b.started = time.Now()
-	for i := 0; i < b.nClients; i++ {
-		group.Go(func() (err error) {
 
-			var (
-				client *Client
-				key    string
-				val    []byte
-			)
-
-			// Create the client to execute the requests
-			if client, err = NewClient(b.config); err != nil {
-				return err
-			}
-
-			// Create an identity for the client
-			identity := fmt.Sprintf("%04X", rand.Intn(10000))
-
-			// Send commit requests to the server
-			for j := uint64(0); j < b.requests; j++ {
-				key = fmt.Sprintf("%s-%04X", identity, j)
-				val = []byte(time.Now().String())
-				if _, err = client.Commit(key, val); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
+	if b.blast {
+		// NOTE: nClients is NOT ignored in blast mode
+		requests := b.NumRequests()
+		for i := uint64(0); i < requests; i++ {
+			group.Go(b.runBlast)
+		}
+	} else {
+		for i := 0; i < b.nClients; i++ {
+			group.Go(b.runClient)
+		}
 	}
 
 	group.Wait()
@@ -126,4 +109,42 @@ func (b *Benchmark) Dump(path string) error {
 	data["hostname"], _ = os.Hostname()
 
 	return appendJSON(path, data)
+}
+
+func (b *Benchmark) runClient() (err error) {
+
+	var (
+		client *Client
+		key    string
+		val    []byte
+	)
+
+	// Create the client to execute the requests
+	if client, err = NewClient(b.config); err != nil {
+		return err
+	}
+
+	// Send commit requests to the server
+	for j := uint64(0); j < b.requests; j++ {
+		key = fmt.Sprintf("%s-%04X", client.identity, j)
+		val = []byte(time.Now().String())
+		if _, err = client.Commit(key, val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *Benchmark) runBlast() (err error) {
+	// Create the client to execute the requests
+	var client *Client
+	if client, err = NewClient(b.config); err != nil {
+		return err
+	}
+
+	// Send the commit request
+	if _, err = client.Commit(client.identity, []byte(time.Now().String())); err != nil {
+		return err
+	}
+	return nil
 }
