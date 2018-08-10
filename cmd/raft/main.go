@@ -60,6 +60,10 @@ func main() {
 					Usage: "write metrics to specified path",
 					Value: "",
 				},
+				cli.Int64Flag{
+					Name:  "s, seed",
+					Usage: "specify the random seed",
+				},
 			},
 		},
 		{
@@ -154,6 +158,10 @@ func serve(c *cli.Context) (err error) {
 
 	if name := c.String("name"); name != "" {
 		config.Name = name
+	}
+
+	if seed := c.Int64("seed"); seed > 0 {
+		config.Seed = seed
 	}
 
 	if replica, err = raft.New(config); err != nil {

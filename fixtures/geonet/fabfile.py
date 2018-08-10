@@ -43,11 +43,14 @@ def load_hosts(path):
         return json.load(f)
 
 
+def get_region(name):
+    return " ".join(name.split("-")[1:-1])
+
+
 def load_host_regions(hosts):
     locations = defaultdict(list)
     for host in hosts:
-        loc = " ".join(host.split("-")[1:-1])
-        locations[loc].append(host)
+        locations[get_region(host)].append(host)
     return locations
 
 
@@ -200,14 +203,19 @@ def bench(config, clients):
     # Create the serve command
     peers = set(peer["name"] for peer in config["peers"])
     if name in peers:
-        args = make_args(c="config.json", o="metrics.json", u="1m", n=name)
-        command.append("raft serve {}".format(args))
+        kws = {
+            "c": "config.json", "o": "metrics.json", "u": "1m", "n": name
+        }
+
+        if name == config["leader"]:
+            kws["s"] = 3632
+
+        command.append("raft serve {}".format(make_args(**kws)))
 
     # Create the benchmark command
-    n = round_robin(int(clients), env.host)
-    if n > 0:
-        args = make_args(c="config.json", n=n, r=100, o="metrics.json", d="20s")
-        command.append("raft bench -b {}".format(args))
+    if name == config["client"]:
+        args = make_args(c="config.json", n=10, r=500, o="metrics.json", d="20s")
+        command.append("raft bench {}".format(args))
 
     if len(command) == 0:
         return
