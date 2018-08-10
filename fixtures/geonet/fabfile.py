@@ -29,7 +29,7 @@ from dateutil.parser import parse as date_parse
 
 from fabric.contrib import files
 from fabric.colors import red, green, cyan
-from fabric.api import env, run, cd, get, put
+from fabric.api import env, run, cd, get, put, hide
 from fabric.api import parallel, task, runs_once, execute
 
 
@@ -71,6 +71,7 @@ load_dotenv(find_dotenv())
 ## Local paths
 fixtures = os.path.dirname(__file__)
 hostinfo = os.path.join(fixtures, "hosts.json")
+sshconf  = os.path.expanduser("~/.ssh/geonet.config")
 
 ## Remote Paths
 workspace = "/data/raft"
@@ -84,6 +85,7 @@ env.hosts = sorted(list(hosts.keys()))
 
 ## Fabric Env
 env.user = "ubuntu"
+env.ssh_config_path = sshconf
 env.colorize_errors = True
 env.use_ssh_config = True
 env.forward_agent = True
@@ -131,21 +133,23 @@ def update():
         run("go install ./...")
 
 
-@parallel
-def _version():
-    return run("raft -version", quiet=True)
-
-
 @task
 @runs_once
 def version():
     """
     Get the current Raft version number
     """
+
+    @parallel
+    def _version():
+        return run("raft -version")
+
     row = re.compile(r'raft version ([\d\.]+)', re.I)
     table = []
     counts = defaultdict(int)
-    data = execute(_version)
+
+    with hide("output", "running"):
+        data = execute(_version)
 
     for host, line in data.items():
         version = row.match(line).groups()[0]
@@ -202,8 +206,8 @@ def bench(config, clients):
     # Create the benchmark command
     n = round_robin(int(clients), env.host)
     if n > 0:
-        args = make_args(c="config.json", n=n, r=5000, o="metrics.json", d="20s")
-        command.append("raft bench {}".format(args))
+        args = make_args(c="config.json", n=n, r=100, o="metrics.json", d="20s")
+        command.append("raft bench -b {}".format(args))
 
     if len(command) == 0:
         return

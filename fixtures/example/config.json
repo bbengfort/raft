@@ -2,6 +2,7 @@
   "tick": "1s",
   "timeout": "400ms",
   "log_level": 3,
+  "leader": "charlie",
   "peers": [
     {
       "pid": 1,

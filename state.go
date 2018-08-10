@@ -103,9 +103,13 @@ func (r *Replica) setRunningState() error {
 		return errors.New("can only set running state from initialized")
 	}
 
-	// TODO: add bootstrap code
-	// Start election timeout to elect the leader if None
+	// Start election timeout
 	r.ticker.Start(ElectionTimeout)
+
+	if r.config.IsLeader() {
+		// Bootstrap leader by starting election
+		go r.Dispatch(&event{etype: ElectionTimeout, source: nil, value: nil})
+	}
 
 	status("%s is now running", r.Name)
 	return nil

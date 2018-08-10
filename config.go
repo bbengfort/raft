@@ -29,6 +29,7 @@ type Config struct {
 	Tick     string       `default:"1s" validate:"duration" json:"tick"`       // clock tick rate for timing (parseable duration)
 	Timeout  string       `default:"500ms" validate:"duration" json:"timeout"` // timeout to wait for responses (parseable duration)
 	LogLevel int          `default:"3" validate:"uint" json:"log_level"`       // verbosity of logging, lower is more verbose
+	Leader   string       `required:"false" json:"leader,omitempty"`           // designated initial leader, if any
 	Peers    []peers.Peer `json:"peers"`                                       // definition of all hosts on the network
 
 	// Experimental configuration
@@ -131,6 +132,15 @@ func (c *Config) GetPeer() (peers.Peer, error) {
 	}
 
 	return peers.Peer{}, fmt.Errorf("could not find peer for '%s'", local)
+}
+
+// IsLeader returns true if the local replica is the leader.
+func (c *Config) IsLeader() bool {
+	if c.Leader != "" {
+		name, _ := c.GetName()
+		return name == c.Leader
+	}
+	return false
 }
 
 // GetRemotes returns all peer configurations for remote hosts on the network,
