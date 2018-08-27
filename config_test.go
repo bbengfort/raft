@@ -13,14 +13,15 @@ var _ = Describe("Config", func() {
 
 	It("should validate a correct configuration", func() {
 		conf := &Config{
-			Name:     "foo",
-			Seed:     42,
-			Tick:     "1200ms",
-			Timeout:  "300ms",
-			LogLevel: 2,
-			Leader:   "alpha",
-			Uptime:   "15m",
-			Metrics:  "metrics.json",
+			Name:      "foo",
+			Seed:      42,
+			Tick:      "1200ms",
+			Timeout:   "300ms",
+			Aggregate: true,
+			LogLevel:  2,
+			Leader:    "alpha",
+			Uptime:    "15m",
+			Metrics:   "metrics.json",
 		}
 		Ω(conf.Validate()).Should(Succeed())
 	})
@@ -33,6 +34,20 @@ var _ = Describe("Config", func() {
 		Ω(err).Should(HaveOccurred())
 
 		Ω(conf.Load()).Should(Succeed())
+
+		// Validate configuration defaults
+		Ω(conf.Tick).Should(Equal("1s"))
+		Ω(conf.Timeout).Should(Equal("500ms"))
+		Ω(conf.Aggregate).Should(BeTrue())
+		Ω(conf.LogLevel).Should(Equal(3))
+
+		// Validate non configurations
+		Ω(conf.Name).Should(BeZero())
+		Ω(conf.Seed).Should(BeZero())
+		Ω(conf.Leader).Should(BeZero())
+		Ω(conf.Peers).Should(BeZero())
+		Ω(conf.Uptime).Should(BeZero())
+		Ω(conf.Metrics).Should(BeZero())
 	})
 
 	It("should be able to parse durations", func() {

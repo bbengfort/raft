@@ -57,6 +57,67 @@ func (r *Replica) onCommitRequest(e Event) (err error) {
 	return nil
 }
 
+func (r *Replica) onAggregatedCommitRequest(ae Event) (err error) {
+	var (
+		ok    bool
+		reqs  []Event
+		req   *pb.CommitRequest
+		con   chan *pb.CommitReply
+		entry *pb.LogEntry
+	)
+
+	// Get all requests from the event
+	if reqs, ok = ae.Value().([]Event); !ok {
+		return ErrEventTypeError
+	}
+
+	// Tell the world about the aggregation
+	info("aggregating %d commit requests into single append entries", len(reqs))
+
+	// Handle each request by redirecting to the leader or creating an entry
+	// in the log and associating the client with the entries index for reply.
+	for _, e := range reqs {
+		// Get the commit reply connection
+		if con, ok = e.Source().(chan *pb.CommitReply); !ok {
+			return ErrEventSourceError
+		}
+
+		// If the replica is not the leader, forward the client
+		if r.leader != r.Name {
+			con <- r.makeRedirect()
+			continue
+		}
+
+		// Otherwise create an entry in the log
+		if req, ok = e.Value().(*pb.CommitRequest); !ok {
+			return ErrEventTypeError
+		}
+
+		if entry, err = r.log.Create(req.Name, req.Value, r.term); err != nil {
+			return err
+		}
+
+		// Tie the entry and the source together so reply is sent on commit/drop.
+		r.clients[entry.Index] = con
+	}
+
+	// If we're not leader, we're done sending redirects, so exit
+	if r.leader != r.Name {
+		return nil
+	}
+
+	// Interrupt the heartbeat and send append entries with all new entries
+	r.ticker.Interrupt(HeartbeatTimeout)
+
+	for _, peer := range r.remotes {
+		if err = peer.AppendEntries(r.leader, r.term, r.log); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *Replica) onVoteRequest(e Event) (err error) {
 	var (
 		ok  bool

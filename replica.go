@@ -55,14 +55,16 @@ func (r *Replica) Listen() error {
 	r.setState(Running)
 
 	// Run event handling loop
-	for event := range r.events {
-		if err := r.Handle(event); err != nil {
+	if r.config.Aggregate {
+		if err := r.runAggregatingEventLoop(); err != nil {
+			return err
+		}
+	} else {
+		if err := r.runEventLoop(); err != nil {
 			return err
 		}
 	}
 
-	// If the events channel has been exhausted, nilify it
-	r.events = nil
 	return nil
 }
 
@@ -97,6 +99,8 @@ func (r *Replica) Handle(e Event) error {
 		return r.onElectionTimeout(e)
 	case CommitRequestEvent:
 		return r.onCommitRequest(e)
+	case AggregatedCommitRequestEvent:
+		return r.onAggregatedCommitRequest(e)
 	case VoteRequestEvent:
 		return r.onVoteRequest(e)
 	case VoteReplyEvent:
@@ -204,5 +208,101 @@ func (r *Replica) DropEntry(entry *pb.LogEntry) error {
 
 	// Ensure the map is cleaned up after response!
 	delete(r.clients, entry.Index)
+	return nil
+}
+
+//===========================================================================
+// Event Loops
+//===========================================================================
+
+// Runs a normal event loop, handling one event at a time.
+func (r *Replica) runEventLoop() error {
+	defer func() {
+		// nilify the events channel when we stop running it
+		r.events = nil
+	}()
+
+	for e := range r.events {
+		if err := r.Handle(e); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Runs an event loop that aggregates multiple commit requests into a single
+// append entries request that is sent to peers at once. this optimizes the
+// benchmarking case and improves response times to clients during high volume
+// periods. This is the primary addition for 0.4 functionality.
+func (r *Replica) runAggregatingEventLoop() error {
+	defer func() {
+		// nilify the events channel when we stop running it
+		r.events = nil
+	}()
+
+	for e := range r.events {
+		if e.Type() == CommitRequestEvent {
+			// If we have a commit request, attempt to aggregate, keeping
+			// track of a next value (defaulting to nil) and storing all
+			// commit requests in an array to be handled at once.
+			var next Event
+			requests := []Event{e}
+
+		aggregator:
+			// The aggregator for loop keeps reading events off the channel
+			// until there is nothing on it, or a non-commit request event is
+			// read. In the meantime it aggregates all commit requests on the
+			// event channel into a single events array. Note the non-blocking
+			// read via the select with a default case.
+			for {
+				select {
+				case next = <-r.events:
+					if next.Type() != CommitRequestEvent {
+						// exit aggregator loop and handle next and requests
+						break aggregator
+					} else {
+						// continue to aggregate commit request events
+						requests = append(requests, next)
+					}
+				default:
+					// nothing is on the channel, break aggregator and do not
+					// handle the empty next value by marking it as nil
+					next = nil
+					break aggregator
+				}
+			}
+
+			// This section happens after the aggregator for loop is complete
+			// First handle the commit request events, using an aggregated event
+			// if more than one request was found, otherwise handling normally.
+			if len(requests) > 1 {
+				ae := &event{etype: AggregatedCommitRequestEvent, source: nil, value: requests}
+				if err := r.Handle(ae); err != nil {
+					return err
+				}
+			} else {
+				// Handle the single commit request without the aggregator
+				// TODO: is this necessary?
+				if err := r.Handle(requests[0]); err != nil {
+					return err
+				}
+			}
+
+			// Second, handle the next event if one exists
+			if next != nil {
+				if err := r.Handle(next); err != nil {
+					return err
+				}
+			}
+
+		} else {
+			// Otherwise handle event normally without aggregation
+			if err := r.Handle(e); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

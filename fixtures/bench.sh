@@ -18,7 +18,7 @@ time {
   fi
 
   # Run the experiment for each clients $RUNS times
-  for (( I=0; I<=$RUNS; I+=1 )); do
+  for (( I=0; I<$RUNS; I+=1 )); do
 
       # Run a benchmark from min clients to max clients
       for (( J=$MIN_CLIENTS; J<=$MAX_CLIENTS; J++ )); do

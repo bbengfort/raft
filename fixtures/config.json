@@ -1,6 +1,7 @@
 {
   "tick": "300ms",
   "timeout": "100ms",
+  "aggregate": true,
   "log_level": 5,
   "peers": [
     {

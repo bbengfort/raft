@@ -12,6 +12,7 @@ const (
 	AppendRequestEvent
 	AppendReplyEvent
 	CommitRequestEvent
+	AggregatedCommitRequestEvent
 	CommitReplyEvent
 	TimeoutEvent
 	HeartbeatTimeout
@@ -22,7 +23,7 @@ const (
 var eventTypeStrings = [...]string{
 	"unknown", "error", "entryCommitted", "entryDropped", "messageReceived",
 	"voteRequested", "voteReplied", "appendRequested", "appendReplied",
-	"commitRequested", "commitReplied",
+	"commitRequested", "aggregatedCommitRequests", "commitReplied",
 	"timeout", "heartbeatTimeout", "electionTimeout",
 }
 

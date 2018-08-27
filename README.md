@@ -19,6 +19,7 @@ This should install the `raft` command on your system. Create a configuration fi
 {
   "tick": "300ms",
   "timeout": "100ms",
+  "aggregate": true,
   "log_level": 5,
   "peers": [
     {

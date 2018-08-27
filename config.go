@@ -24,13 +24,14 @@ import (
 // environment using environment variables prefixed with $RAFT_ and the all
 // caps version of the configuration name.
 type Config struct {
-	Name     string       `required:"false" json:"name"`                       // unique name of the local replica, hostname by default
-	Seed     int64        `required:"false" json:"seed"`                       // random seed to initialize random generator
-	Tick     string       `default:"1s" validate:"duration" json:"tick"`       // clock tick rate for timing (parseable duration)
-	Timeout  string       `default:"500ms" validate:"duration" json:"timeout"` // timeout to wait for responses (parseable duration)
-	LogLevel int          `default:"3" validate:"uint" json:"log_level"`       // verbosity of logging, lower is more verbose
-	Leader   string       `required:"false" json:"leader,omitempty"`           // designated initial leader, if any
-	Peers    []peers.Peer `json:"peers"`                                       // definition of all hosts on the network
+	Name      string       `required:"false" json:"name,omitempty"`             // unique name of the local replica, hostname by default
+	Seed      int64        `required:"false" json:"seed,omitempty"`             // random seed to initialize random generator
+	Tick      string       `default:"1s" validate:"duration" json:"tick"`       // clock tick rate for timing (parseable duration)
+	Timeout   string       `default:"500ms" validate:"duration" json:"timeout"` // timeout to wait for responses (parseable duration)
+	Aggregate bool         `default:"true" json:"aggregate"`                    // aggregate append entries from multiple concurrent clients
+	LogLevel  int          `default:"3" validate:"uint" json:"log_level"`       // verbosity of logging, lower is more verbose
+	Leader    string       `required:"false" json:"leader,omitempty"`           // designated initial leader, if any
+	Peers     []peers.Peer `json:"peers"`                                       // definition of all hosts on the network
 
 	// Experimental configuration
 	// TODO: remove after benchmarks
