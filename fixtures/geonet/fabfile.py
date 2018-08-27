@@ -193,6 +193,7 @@ def bench(config, clients):
     Run all servers on the host as well as benchmarks for the number of
     clients specified.
     """
+    clients = int(clients)
     name = addrs[env.host]
     command = []
 
@@ -214,7 +215,12 @@ def bench(config, clients):
 
     # Create the benchmark command
     if name == config["client"]:
-        args = make_args(c="config.json", n=10, r=500, o="metrics.json", d="20s")
+        if clients <= 10:
+            r = 500
+        else:
+            r = int(5000 / clients) + 1
+
+        args = make_args(c="config.json", n=clients, r=r, o="metrics.json", d="20s")
         command.append("raft bench {}".format(args))
 
     if len(command) == 0:

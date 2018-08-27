@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Location of the results and configs
+MINCLIENTS=1
+MAXCLIENTS=42
 RESULTS="data/"
 CONFIGS="configs/*.json"
 
@@ -23,13 +25,13 @@ time {
           fab putconfig:$conf
 
           # Step Four: # Run the throughput benchmark
-          # for (( J=1; J<=17; J++ )); do
-          fab "bench:$conf,17"
+          for (( J=$MINCLIENTS; J<=$MAXCLIENTS; J++ )); do
+            fab "bench:$conf,$J"
 
-          # Fetch the results and cleanup
-          fab getmerge:path=$RESULTS
-          fab cleanup
-          # done
+            # Fetch the results and cleanup
+            fab getmerge:path=$RESULTS
+            fab cleanup
+          done
 
         fi
     done
