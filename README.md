@@ -64,7 +64,7 @@ The `-n` command specifies which peer configures the local replica, by default i
 $ raft commit -k "key" -v "value"
 ```
 
-This commits the command named "key" with the specified "value" to the log. Note that the client is automatically redirected to the leader and requires the same configuration to connect. 
+This commits the command named "key" with the specified "value" to the log. Note that the client is automatically redirected to the leader and requires the same configuration to connect.
 
 
 ## Benchmarks
@@ -79,3 +79,7 @@ Note that because these benchmarks are run on a single machine, there is no netw
 - Version 0.2: gRPC bidirectional streaming for AppendEntries
 - Version 0.3: experimental design and setup (not benchmarked)
 - Version 0.4: aggregate append entries from clients
+
+The following benchmark shows the performance of the latest version of Raft on a cluster of three and five `t2.medium` instances running in a single AWS region.
+
+![Benchmark](fixtures/quorum-benchmark.png)
