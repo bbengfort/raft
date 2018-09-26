@@ -3,6 +3,7 @@
   "timeout": "100ms",
   "aggregate": true,
   "log_level": 5,
+  "leader": "alpha",
   "peers": [
     {
       "pid": 1,

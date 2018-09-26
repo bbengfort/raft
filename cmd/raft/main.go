@@ -79,6 +79,11 @@ func main() {
 					Value: "",
 				},
 				cli.StringFlag{
+					Name:  "a, addr",
+					Usage: "name or address of replica to connect to",
+					Value: "",
+				},
+				cli.StringFlag{
 					Name:  "k, key",
 					Usage: "the name of the command to commit",
 				},
@@ -100,25 +105,28 @@ func main() {
 					Usage: "configuration file for replica",
 					Value: "",
 				},
-				cli.IntFlag{
-					Name:  "n, nclients",
-					Usage: "number of concurrent clients to run",
-					Value: 4,
+				cli.StringFlag{
+					Name:  "a, addr",
+					Usage: "name or address of replica to connect to",
+					Value: "",
 				},
-				cli.Uint64Flag{
+				cli.UintFlag{
 					Name:  "r, requests",
 					Usage: "number of requests issued per client",
 					Value: 1000,
 				},
-				cli.StringFlag{
-					Name:  "o, outpath",
-					Usage: "write metrics to specified path",
-					Value: "",
+				cli.IntFlag{
+					Name:  "s, size",
+					Usage: "number of bytes per value",
+					Value: 32,
 				},
 				cli.DurationFlag{
 					Name:  "d, delay",
 					Usage: "wait specified time before starting benchmark",
-					Value: 0,
+				},
+				cli.IntFlag{
+					Name:  "i, indent",
+					Usage: "indent the results by specified number of spaces",
 				},
 				cli.BoolFlag{
 					Name:  "b, blast",
@@ -203,7 +211,7 @@ func serve(c *cli.Context) (err error) {
 //===========================================================================
 
 func commit(c *cli.Context) (err error) {
-	if client, err = raft.NewClient(config); err != nil {
+	if client, err = raft.NewClient(c.String("addr"), config); err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
@@ -222,20 +230,24 @@ func bench(c *cli.Context) error {
 		time.Sleep(delay)
 	}
 
+	if c.Bool("blast") && c.String("addr") == "" {
+		return cli.NewExitError("blast requires the address of the leader specified", 1)
+	}
+
 	benchmark, err := raft.NewBenchmark(
-		config, c.Int("nclients"), c.Uint64("requests"), c.Bool("blast"),
+		config, c.String("addr"), c.Bool("blast"), c.Uint("requests"), c.Uint("size"), c.Uint("workers"),
 	)
 
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
-	if path := c.String("outpath"); path != "" {
-		if err := benchmark.Dump(path); err != nil {
-			return cli.NewExitError(err.Error(), 1)
-		}
+	// Print the results
+	results, err := benchmark.JSON(c.Int("indent"))
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
 	}
 
-	fmt.Println(benchmark)
+	fmt.Println(string(results))
 	return nil
 }

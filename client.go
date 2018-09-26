@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/bbengfort/raft/pb"
@@ -16,7 +17,7 @@ import (
 const DefaultRetries = 3
 
 // NewClient creates a new raft client to conect to a quorum.
-func NewClient(options *Config) (client *Client, err error) {
+func NewClient(remote string, options *Config) (client *Client, err error) {
 	// Create a new configuration from defaults, configuration file, and the
 	// environment; verify it returning any errors.
 	config := new(Config)
@@ -40,12 +41,20 @@ func NewClient(options *Config) (client *Client, err error) {
 		client.identity = fmt.Sprintf("%04X-%04X", rand.Intn(0x10000), rand.Intn(0x10000))
 	}
 
+	// Connect when the client is created
+	// NOTE: connection errors still return the client!
+	// TODO: add synchronization to connect and reconnect
+	if err = client.connect(remote); err != nil {
+		return client, err
+	}
+
 	return client, nil
 }
 
 // Client maintains network information embedded in the configuration to
 // connect to a Raft consensus quorum and make commit requests.
 type Client struct {
+	sync.RWMutex
 	config   *Config
 	conn     *grpc.ClientConn
 	client   pb.RaftClient

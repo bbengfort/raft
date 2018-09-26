@@ -14,9 +14,10 @@ sns.set_context('notebook')
 FIXTURES = os.path.dirname(__file__)
 THROUGHPUT = os.path.join(FIXTURES, "throughput.csv")
 FIGURE = os.path.join(FIXTURES, "benchmark.png")
+TITLE = "Raft Benchmark"
 
 
-def draw_benchmark(path, vtype='line', exclude=None):
+def draw_benchmark(path, vtype='line', exclude=None, title=TITLE, outpath=FIGURE):
     exclude = set([]) if exclude is None else set(exclude)
     df = pd.read_csv(path)
     df = df[~df['version'].isin(exclude)]
@@ -30,17 +31,21 @@ def draw_benchmark(path, vtype='line', exclude=None):
         _, ax = plt.subplots(figsize=(9,6))
 
         if vtype == 'line':
-            draw_line_benchmark(df, ax)
+            draw_line_benchmark(df, ax, title=title)
         elif vtype == 'bar':
-            draw_bar_benchmark(df, ax)
+            draw_bar_benchmark(df, ax, title=title)
         else:
             raise ValueError("unknown viz type: '{}'".format(vtype))
 
     plt.tight_layout()
-    plt.savefig(FIGURE)
+
+    if outpath:
+        plt.savefig(outpath)
+    else:
+        plt.show()
 
 
-def draw_line_benchmark(df, ax):
+def draw_line_benchmark(df, ax, title=None):
     max_clients = df['clients'].max()
 
     for vers in df['version'].unique():
@@ -54,16 +59,19 @@ def draw_line_benchmark(df, ax):
     ax.set_xlim(1, max_clients)
     ax.set_ylabel("throughput (requests/second)")
     ax.set_xlabel("concurrent clients")
-    ax.set_title("Raft Benchmark")
     ax.legend(frameon=True)
+    if title:
+        ax.set_title(title)
     return ax
 
 
-def draw_bar_benchmark(df, ax):
+def draw_bar_benchmark(df, ax, title=None):
     g = sns.barplot('clients', 'throughput', hue='version', ax=ax, data=df)
     ax.set_ylabel("")
     ax.set_xlabel("concurrent clients")
-    ax.set_title("Raft Benchmark")
+
+    if title:
+        ax.set_title(title)
     return ax
 
 
@@ -73,6 +81,10 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '-T', '--title', default=TITLE,
+        help="specify the title of the chart", 
+    )
+    parser.add_argument(
         '-t', '--type', choices=('bar', 'line', 'both'), default='line',
         help='specify the type of chart to produce'
     )
@@ -80,7 +92,11 @@ if __name__ == '__main__':
         '-e', '--exclude', nargs="*",
         help='specify server types to exclude from visualization',
     )
+    parser.add_argument(
+        '-o', '--outpath', default=None, 
+        help='specify the path to save the figure',
+    )
     parser.add_argument("data")
 
     args = parser.parse_args()
-    draw_benchmark(args.data, args.type, args.exclude)
+    draw_benchmark(args.data, args.type, args.exclude, args.title, args.outpath)
