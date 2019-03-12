@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/bbengfort/x/stats"
 )
 
 // Metrics tracks the measurable statistics of the system over time from the
@@ -11,17 +13,21 @@ import (
 // time period.
 type Metrics struct {
 	sync.RWMutex
-	started  time.Time       // The time of the first client message
-	finished time.Time       // The time of the last client message
-	requests uint64          // Number of requests made to server
-	commits  uint64          // The number of committed entries
-	drops    uint64          // The number of dropped entries
-	clients  map[string]bool // The unique clients seen
+	started     time.Time         // The time of the first client message
+	finished    time.Time         // The time of the last client message
+	requests    uint64            // Number of requests made to server
+	commits     uint64            // The number of committed entries
+	drops       uint64            // The number of dropped entries
+	clients     map[string]bool   // The unique clients seen
+	aggregation *stats.Statistics // Track the number and size of aggregations
 }
 
 // NewMetrics creates the metrics data store
 func NewMetrics() *Metrics {
-	return &Metrics{clients: make(map[string]bool)}
+	return &Metrics{
+		clients:     make(map[string]bool),
+		aggregation: new(stats.Statistics),
+	}
 }
 
 // Request registers a new client request
@@ -49,6 +55,12 @@ func (m *Metrics) Complete(commit bool) {
 	m.finished = time.Now()
 }
 
+// Aggregation is called when an aggregation occurs. No need for synchronization
+// here since the stats object is synchronized.
+func (m *Metrics) Aggregation(n int) {
+	m.aggregation.Update(float64(n))
+}
+
 // Dump the metrics to JSON
 func (m *Metrics) Dump(path string, extra map[string]interface{}) (err error) {
 	m.RLock()
@@ -72,6 +84,7 @@ func (m *Metrics) Dump(path string, extra map[string]interface{}) (err error) {
 	data["clients"] = len(m.clients)
 	data["throughput"] = m.throughput()
 	data["duration"] = m.duration().String()
+	data["aggregation"] = m.aggregation.Serialize()
 
 	return appendJSON(path, data)
 }

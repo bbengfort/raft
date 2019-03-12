@@ -115,6 +115,9 @@ func (r *Replica) onAggregatedCommitRequest(ae Event) (err error) {
 		}
 	}
 
+	// Track the number of aggregations
+	r.Metrics.Aggregation(len(reqs))
+
 	return nil
 }
 
