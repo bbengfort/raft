@@ -4,13 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/bbengfort/raft"
 	"github.com/bbengfort/raft/pb"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
+
+	_ "net/http/pprof"
 )
 
 // Command variables
@@ -63,6 +67,10 @@ func main() {
 				cli.Int64Flag{
 					Name:  "s, seed",
 					Usage: "specify the random seed",
+				},
+				cli.BoolFlag{
+					Name:  "P, profile",
+					Usage: "enable go profiling",
 				},
 			},
 		},
@@ -163,6 +171,14 @@ func initConfig(c *cli.Context) (err error) {
 //===========================================================================
 
 func serve(c *cli.Context) (err error) {
+	if c.Bool("profile") {
+		go func() {
+			fmt.Println("==== PROFILING ENABLED ==========")
+			runtime.SetBlockProfileRate(5000)
+			err := http.ListenAndServe("0.0.0.0:6060", nil)
+			panic(err)
+		}()
+	}
 
 	if name := c.String("name"); name != "" {
 		config.Name = name
