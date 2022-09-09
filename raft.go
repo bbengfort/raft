@@ -19,7 +19,7 @@ import (
 //===========================================================================
 
 // PackageVersion of the current Raft implementation
-const PackageVersion = "0.6"
+const PackageVersion = "0.5"
 
 // Initialize the package and random numbers, etc.
 func init() {
