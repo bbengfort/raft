@@ -123,8 +123,8 @@ func (l *Log) Create(name string, value []byte, term uint64) (*pb.LogEntry, erro
 // an entry creates a log inconsistency (out of order term or index), then an
 // error is returned. A couple of important notes:
 //
-//    1. Append does not undo any successful appends even on error
-//    2. Append will not compare entries that specify the same index
+//  1. Append does not undo any successful appends even on error
+//  2. Append will not compare entries that specify the same index
 //
 // These notes mean that all entries being appended to this log should be
 // consistent with each other as well as the end of the log, and that the log
@@ -189,7 +189,7 @@ func (l *Log) Commit(index uint64) error {
 // entry at the specified index; e.g. truncate after.
 func (l *Log) Truncate(index, term uint64) error {
 	// Ensure the truncation matches an entry
-	if index < 0 || index > l.lastApplied {
+	if index > l.lastApplied {
 		return fmt.Errorf("cannot truncate invalid index %d", index)
 	}
 

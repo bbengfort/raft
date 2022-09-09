@@ -1,6 +1,6 @@
 # Raft
 
-[![Build Status](https://github.com/bbengfort/raft/actions/workflows/test.yaml/badge.svg?branch=main)
+[![Build Status](https://github.com/bbengfort/raft/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/bbengfort/raft/actions/workflows/test.yaml)
 [![GoDoc](https://godoc.org/github.com/bbengfort/raft?status.svg)](https://pkg.go.dev/github.com/bbengfort/raft)
 
 **Actor based implementation of the [Raft consensus algorithm](https://raft.github.io/)**.

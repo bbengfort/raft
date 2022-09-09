@@ -31,8 +31,7 @@ func (e *testEvent) Value() interface{} {
 var _ = Describe("Events", func() {
 
 	It("should be able to assign mock event to EventType", func() {
-		var event Event
-		event = &testEvent{} // this will fail before the assertion but is a good sanity check
+		var event Event = &testEvent{} // this will fail before the assertion but is a good sanity check
 		Ω(&testEvent{}).Should(BeAssignableToTypeOf(event))
 	})
 

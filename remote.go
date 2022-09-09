@@ -144,8 +144,10 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 // explicitly called, but is instead connected when a message is sent.
 func (c *Remote) Connect() (err error) {
 	addr := c.Endpoint(true)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
 
-	if c.conn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(c.timeout)); err != nil {
+	if c.conn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure()); err != nil {
 		return fmt.Errorf("could not connect to '%s': %s", addr, err.Error())
 	}
 
@@ -258,6 +260,8 @@ func (c *Remote) afterSend(err error) error {
 
 // Dispatch fatal errors as an error event to the actor, in a go routine so
 // that the remote can still be accessed or managed (e.g. closed).
+//
+//lint:ignore U1000 keeping this function stub for future use.
 func (c *Remote) error(err error) {
 	go func() {
 		c.actor.Dispatch(&event{

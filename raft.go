@@ -32,6 +32,7 @@ func init() {
 	cautionCounter.init()
 
 	// Stop the grpc verbose logging
+	//lint:ignore SA1019 noplog doesn't implement the V2 interface
 	grpclog.SetLogger(noplog.New())
 }
 

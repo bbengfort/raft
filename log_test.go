@@ -70,7 +70,7 @@ var _ = Describe("Log", func() {
 					Index: 1,
 					Term:  42,
 					Name:  "foo",
-					Value: []byte(fmt.Sprintf("%s", time.Now())),
+					Value: []byte(time.Now().Format(time.RFC3339Nano)),
 				}
 
 				err := log.Append(entry)
@@ -87,25 +87,25 @@ var _ = Describe("Log", func() {
 						Index: 1,
 						Term:  42,
 						Name:  "foo",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 					{
 						Index: 2,
 						Term:  42,
 						Name:  "bar",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 					{
 						Index: 3,
 						Term:  42,
 						Name:  "baz",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 					{
 						Index: 4,
 						Term:  42,
 						Name:  "zop",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 				}
 
@@ -229,25 +229,25 @@ var _ = Describe("Log", func() {
 						Index: lastIdx + 1,
 						Term:  term,
 						Name:  "foo",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 					{
 						Index: lastIdx + 2,
 						Term:  term,
 						Name:  "bar",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 					{
 						Index: lastIdx + 3,
 						Term:  term,
 						Name:  "baz",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 					{
 						Index: lastIdx + 4,
 						Term:  term,
 						Name:  "zop",
-						Value: []byte(fmt.Sprintf("%s", time.Now())),
+						Value: []byte(time.Now().Format(time.RFC3339Nano)),
 					},
 				}
 

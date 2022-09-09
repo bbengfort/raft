@@ -69,10 +69,8 @@ func (m *Metrics) Dump(path string, extra map[string]interface{}) (err error) {
 	data := make(map[string]interface{})
 
 	// Append extra information
-	if extra != nil {
-		for key, val := range extra {
-			data[key] = val
-		}
+	for key, val := range extra {
+		data[key] = val
 	}
 
 	data["metric"] = "server"

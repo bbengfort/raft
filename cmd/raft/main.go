@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"runtime"
@@ -154,13 +153,13 @@ func main() {
 
 func initConfig(c *cli.Context) (err error) {
 	if c.String("config") != "" {
-		data, err := ioutil.ReadFile(c.String("config"))
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+		var f *os.File
+		if f, err = os.Open(c.String("config")); err != nil {
+			return cli.NewExitError(err, 1)
 		}
 
-		if err = json.Unmarshal(data, &config); err != nil {
-			return cli.NewExitError(err.Error(), 1)
+		if err = json.NewDecoder(f).Decode(&config); err != nil {
+			return cli.NewExitError(err, 1)
 		}
 	}
 	return nil

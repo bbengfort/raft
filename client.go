@@ -166,9 +166,12 @@ func (c *Client) connect(remote string) (err error) {
 		return err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	// Connect to the remote's address
 	addr := host.Endpoint(false)
-	if c.conn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(timeout)); err != nil {
+	if c.conn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure()); err != nil {
 		return fmt.Errorf("could not connect to '%s': %s", addr, err.Error())
 	}
 

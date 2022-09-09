@@ -83,11 +83,15 @@ func print(level uint8, msg string, a ...interface{}) {
 
 // Prints to the standard logger if level is warn or greater; arguments are
 // handled in the manner of log.Printf, but a newline is appended.
+//
+//lint:ignore U1000 keeping this function stub for future use.
 func warn(msg string, a ...interface{}) {
 	print(LogWarn, msg, a...)
 }
 
 // Helper function to simply warn about an error received.
+//
+//lint:ignore U1000 keeping this function stub for future use.
 func warne(err error) {
 	warn(err.Error())
 }
