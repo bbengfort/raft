@@ -74,7 +74,7 @@ func (m *Metrics) Dump(path string, extra map[string]interface{}) (err error) {
 	}
 
 	data["metric"] = "server"
-	data["version"] = PackageVersion
+	data["version"] = Version()
 	data["started"] = m.started.Format(time.RFC3339Nano)
 	data["finished"] = m.finished.Format(time.RFC3339Nano)
 	data["commits"] = m.commits

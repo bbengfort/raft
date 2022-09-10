@@ -1,6 +1,6 @@
 package raft
 
-import "github.com/bbengfort/raft/pb"
+import pb "github.com/bbengfort/raft/api/v1beta1"
 
 func (r *Replica) onHeartbeatTimeout(e Event) error {
 	for _, peer := range r.remotes {

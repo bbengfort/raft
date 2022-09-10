@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/bbengfort/raft/pb"
+	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/peers"
 	"google.golang.org/grpc"
 )
@@ -13,6 +13,7 @@ import (
 // in the system. There should only be one replica per process (and many peers).
 // TODO: document more.
 type Replica struct {
+	pb.UnimplementedRaftServer
 	peers.Peer
 
 	// TODO: remove when stable

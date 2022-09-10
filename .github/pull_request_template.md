@@ -2,8 +2,6 @@
 
 [Brief Description of the Changes]
 
-Fixes SC-XXXX
-
 ### Type of change
 
 - [ ] new feature
@@ -25,7 +23,3 @@ Describe how reviewers can test this change to be sure that it works correctly. 
 - [ ]  I have added new test fixtures as needed to support added tests
 - [ ]  Check this box if a reviewer can merge this pull request after approval (leave it unchecked if you want to do it yourself)
 - [ ]  I have moved the associated Shortcut story to "Ready for Review"
-
-### Reviewer(s) checklist
-
-- [ ] Any new user-facing content that has been added for this PR has been QA'ed to ensure correct grammar, spelling, and understandability.

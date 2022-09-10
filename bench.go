@@ -77,7 +77,9 @@ func (b *benchmark) Throughput() float64 {
 }
 
 // CSV returns a results row delimited by commas as:
-//     requests,failures,duration,throughput,version,benchmark
+//
+//	requests,failures,duration,throughput,version,benchmark
+//
 // If header is specified then string contains two rows with the header first.
 func (b *benchmark) CSV(header bool) (string, error) {
 	if !b.Complete() {
@@ -86,7 +88,7 @@ func (b *benchmark) CSV(header bool) (string, error) {
 
 	row := fmt.Sprintf(
 		"%d,%d,%s,%0.4f,%s,%s",
-		b.requests, b.failures, b.duration, b.Throughput(), PackageVersion, b.method,
+		b.requests, b.failures, b.duration, b.Throughput(), Version(), b.method,
 	)
 
 	if header {
@@ -119,7 +121,7 @@ func (b *benchmark) serialize() map[string]interface{} {
 	data["failures"] = b.failures
 	data["duration"] = b.duration.String()
 	data["throughput"] = b.Throughput()
-	data["version"] = PackageVersion
+	data["version"] = Version()
 	data["benchmark"] = b.method
 
 	return data
@@ -297,7 +299,8 @@ func (b *SimpleBenchmark) Run(addr string) (err error) {
 }
 
 // CSV returns a results row delimited by commas as:
-//     concurrency,requests,failures,duration,throughput,version,benchmark
+//
+//	concurrency,requests,failures,duration,throughput,version,benchmark
 func (b *SimpleBenchmark) CSV(header bool) (csv string, err error) {
 	if csv, err = b.benchmark.CSV(header); err != nil {
 		return "", err
