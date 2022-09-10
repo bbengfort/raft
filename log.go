@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bbengfort/raft/pb"
+	pb "github.com/bbengfort/raft/api/v1beta1"
 )
 
 // NewLog creates and initializes a new log whose first entry is the NullEntry.

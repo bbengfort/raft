@@ -1,8 +1,10 @@
 // Defines data structures for log entries and metadata
 syntax = "proto3";
-package pb;
 
-import "time.proto";
+package raft.v1beta1;
+option go_package = "github.com/bbengfort/raft/api/v1beta1;api";
+
+import "raft/v1beta1/time.proto";
 
 // Defines an entry in the log
 message LogEntry {

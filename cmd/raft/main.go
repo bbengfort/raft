@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/bbengfort/raft"
-	"github.com/bbengfort/raft/pb"
+	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/joho/godotenv"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	_ "net/http/pprof"
 )
@@ -24,18 +24,18 @@ var (
 )
 
 func main() {
-
 	// Load the .env file if it exists
 	godotenv.Load()
 
 	// Instantiate the command line application
 	app := cli.NewApp()
 	app.Name = "raft"
-	app.Version = raft.PackageVersion
+	app.Version = raft.Version()
 	app.Usage = "implements the Raft consensus algorithm"
+	app.Flags = []cli.Flag{}
 
 	// Define commands available to application
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:     "serve",
 			Usage:    "run a raft replica server",
@@ -43,33 +43,35 @@ func main() {
 			Action:   serve,
 			Category: "server",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "c, config",
-					Usage: "configuration file for replica",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
+					Usage:   "configuration file for replica",
 				},
-				cli.StringFlag{
-					Name:  "n, name",
-					Usage: "unique name of the replica instance",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "name",
+					Aliases: []string{"n"},
+					Usage:   "unique name of the replica instance",
 				},
-				cli.DurationFlag{
-					Name:  "u, uptime",
-					Usage: "specify a duration for the server to run",
-					Value: 0,
+				&cli.DurationFlag{
+					Name:    "uptime",
+					Aliases: []string{"u"},
+					Usage:   "specify a duration for the server to run",
 				},
-				cli.StringFlag{
-					Name:  "o, outpath",
-					Usage: "write metrics to specified path",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "outpath",
+					Aliases: []string{"o"},
+					Usage:   "write metrics to specified path",
 				},
-				cli.Int64Flag{
-					Name:  "s, seed",
-					Usage: "specify the random seed",
+				&cli.Int64Flag{
+					Name:    "seed",
+					Aliases: []string{"s"},
+					Usage:   "specify the random seed",
 				},
-				cli.BoolFlag{
-					Name:  "P, profile",
-					Usage: "enable go profiling",
+				&cli.BoolFlag{
+					Name:    "profile",
+					Aliases: []string{"P"},
+					Usage:   "enable go profiling",
 				},
 			},
 		},
@@ -80,23 +82,25 @@ func main() {
 			Action:   commit,
 			Category: "client",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "c, config",
-					Usage: "configuration file for network",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
+					Usage:   "configuration file for network",
 				},
-				cli.StringFlag{
-					Name:  "a, addr",
-					Usage: "name or address of replica to connect to",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "addr",
+					Aliases: []string{"a"},
+					Usage:   "name or address of replica to connect to",
 				},
-				cli.StringFlag{
-					Name:  "k, key",
-					Usage: "the name of the command to commit",
+				&cli.StringFlag{
+					Name:    "key",
+					Aliases: []string{"k"},
+					Usage:   "the name of the command to commit",
 				},
-				cli.StringFlag{
-					Name:  "v, value",
-					Usage: "the value of the command to commit",
+				&cli.StringFlag{
+					Name:    "value",
+					Aliases: []string{"v"},
+					Usage:   "the value of the command to commit",
 				},
 			},
 		},
@@ -107,37 +111,43 @@ func main() {
 			Action:   bench,
 			Category: "client",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "c, config",
-					Usage: "configuration file for replica",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
+					Usage:   "configuration file for replica",
+					Value:   "",
 				},
-				cli.StringFlag{
-					Name:  "a, addr",
-					Usage: "name or address of replica to connect to",
-					Value: "",
+				&cli.StringFlag{
+					Name:    "addr",
+					Aliases: []string{"a"},
+					Usage:   "name or address of replica to connect to",
 				},
-				cli.UintFlag{
-					Name:  "r, requests",
-					Usage: "number of requests issued per client",
-					Value: 1000,
+				&cli.UintFlag{
+					Name:    "requests",
+					Aliases: []string{"r"},
+					Usage:   "number of requests issued per client",
+					Value:   1000,
 				},
-				cli.IntFlag{
-					Name:  "s, size",
-					Usage: "number of bytes per value",
-					Value: 32,
+				&cli.IntFlag{
+					Name:    "size",
+					Aliases: []string{"s"},
+					Usage:   "number of bytes per value",
+					Value:   8192,
 				},
-				cli.DurationFlag{
-					Name:  "d, delay",
-					Usage: "wait specified time before starting benchmark",
+				&cli.DurationFlag{
+					Name:    "delay",
+					Aliases: []string{"d"},
+					Usage:   "wait specified time before starting benchmark",
 				},
-				cli.IntFlag{
-					Name:  "i, indent",
-					Usage: "indent the results by specified number of spaces",
+				&cli.IntFlag{
+					Name:    "indent",
+					Aliases: []string{"i"},
+					Usage:   "indent the results by specified number of spaces",
 				},
-				cli.BoolFlag{
-					Name:  "b, blast",
-					Usage: "send all requests per client at once",
+				&cli.BoolFlag{
+					Name:    "blast",
+					Aliases: []string{"b"},
+					Usage:   "send all requests per client at once",
 				},
 			},
 		},
@@ -155,11 +165,11 @@ func initConfig(c *cli.Context) (err error) {
 	if c.String("config") != "" {
 		var f *os.File
 		if f, err = os.Open(c.String("config")); err != nil {
-			return cli.NewExitError(err, 1)
+			return cli.Exit(err, 1)
 		}
 
 		if err = json.NewDecoder(f).Decode(&config); err != nil {
-			return cli.NewExitError(err, 1)
+			return cli.Exit(err, 1)
 		}
 	}
 	return nil
@@ -188,7 +198,7 @@ func serve(c *cli.Context) (err error) {
 	}
 
 	if replica, err = raft.New(config); err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.Exit(err.Error(), 1)
 	}
 
 	// TODO: uptime is only for benchmarking, remove when stable
@@ -197,7 +207,7 @@ func serve(c *cli.Context) (err error) {
 			if path := c.String("outpath"); path != "" {
 				extra := make(map[string]interface{})
 				extra["replica"] = replica.Name
-				extra["version"] = raft.PackageVersion
+				extra["version"] = raft.Version()
 
 				quorum := make([]string, 0, len(config.Peers))
 				for _, peer := range config.Peers {
@@ -215,7 +225,7 @@ func serve(c *cli.Context) (err error) {
 	}
 
 	if err = replica.Listen(); err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.Exit(err.Error(), 1)
 	}
 
 	return nil
@@ -227,12 +237,12 @@ func serve(c *cli.Context) (err error) {
 
 func commit(c *cli.Context) (err error) {
 	if client, err = raft.NewClient(c.String("addr"), config); err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.Exit(err.Error(), 1)
 	}
 
 	var entry *pb.LogEntry
 	if entry, err = client.Commit(c.String("key"), []byte(c.String("value"))); err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.Exit(err.Error(), 1)
 	}
 
 	fmt.Println(entry)
@@ -246,7 +256,7 @@ func bench(c *cli.Context) error {
 	}
 
 	if c.Bool("blast") && c.String("addr") == "" {
-		return cli.NewExitError("blast requires the address of the leader specified", 1)
+		return cli.Exit("blast requires the address of the leader specified", 1)
 	}
 
 	benchmark, err := raft.NewBenchmark(
@@ -254,13 +264,13 @@ func bench(c *cli.Context) error {
 	)
 
 	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.Exit(err.Error(), 1)
 	}
 
 	// Print the results
 	results, err := benchmark.JSON(c.Int("indent"))
 	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.Exit(err.Error(), 1)
 	}
 
 	fmt.Println(string(results))

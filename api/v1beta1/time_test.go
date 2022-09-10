@@ -1,9 +1,9 @@
-package pb_test
+package api_test
 
 import (
 	"time"
 
-	. "github.com/bbengfort/raft/pb"
+	. "github.com/bbengfort/raft/api/v1beta1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

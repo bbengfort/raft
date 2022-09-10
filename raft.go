@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bbengfort/raft/pb"
+	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/noplog"
 	"google.golang.org/grpc/grpclog"
 )
@@ -17,9 +17,6 @@ import (
 //===========================================================================
 // Package Initialization
 //===========================================================================
-
-// PackageVersion of the current Raft implementation
-const PackageVersion = "0.5"
 
 // Initialize the package and random numbers, etc.
 func init() {

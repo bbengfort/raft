@@ -56,7 +56,7 @@ test:
 # Target for testing in continuous integration
 citest:
 	$(info $(BM) running CI tests with randomization and race …)
-	$(GINKGO) -r -v --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
+	$(GINKGO) -r -v --randomizeAllSpecs --randomizeSuites --failOnPending --cover --coverprofile=coverage.txt --covermode=atomic --trace --race --compilers=2
 
 # Run Godoc server and open browser to the documentation
 doc:
@@ -70,9 +70,10 @@ clean:
 	$(info $(RM) cleaning up build …)
 	@ $(GOCLEAN)
 	@ find . -name "*.coverprofile" -print0 | xargs -0 rm -rf
+	@ find . -name "coverage.txt" -print0 | xargs -0 rm -rf
 	@ rm -rf $(BUILD)
 
 # Compile protocol buffers
 protobuf:
 	$(info $(GM) compiling protocol buffers …)
-	@ $(PROTOC) -I $(PBPKG) $(PBPKG)/*.proto --go_out=plugins=grpc:$(PBPKG)
+	@ go generate ./...

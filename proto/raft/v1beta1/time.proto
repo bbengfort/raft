@@ -1,6 +1,8 @@
 // Defines timestamp datastructure
 syntax = "proto3";
-package pb;
+
+package raft.v1beta1;
+option go_package = "github.com/bbengfort/raft/api/v1beta1;api";
 
 // Serializes a time.Time object as an RFC 3339 encoded string.
 message Time {

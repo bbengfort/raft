@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/bbengfort/raft/pb"
+	pb "github.com/bbengfort/raft/api/v1beta1"
 )
 
 // Commit a client request to append some entry to the log.

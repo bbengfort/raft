@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/bbengfort/raft/pb"
+	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/peers"
 	"google.golang.org/grpc"
 )
