@@ -66,6 +66,7 @@ jobs:
           go install github.com/kevinburke/go-bindata/go-bindata@v3.23.0
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+          go install github.com/onsi/ginkgo/ginkgo@v1.16.5
 
       - name: Code Generation
         run: go generate ./...
