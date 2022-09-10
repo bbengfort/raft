@@ -9,6 +9,7 @@ import (
 	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/peers"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Remote maintains a connection to a peer on the network.
@@ -147,7 +148,7 @@ func (c *Remote) Connect() (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	if c.conn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure()); err != nil {
+	if c.conn, err = grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials())); err != nil {
 		return fmt.Errorf("could not connect to '%s': %s", addr, err.Error())
 	}
 
