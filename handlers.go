@@ -1,6 +1,9 @@
 package raft
 
-import pb "github.com/bbengfort/raft/api/v1beta1"
+import (
+	pb "github.com/bbengfort/raft/api/v1beta1"
+	"github.com/rs/zerolog/log"
+)
 
 func (r *Replica) onHeartbeatTimeout(e Event) error {
 	for _, peer := range r.remotes {
@@ -72,7 +75,7 @@ func (r *Replica) onAggregatedCommitRequest(ae Event) (err error) {
 	}
 
 	// Tell the world about the aggregation
-	info("aggregating %d commit requests into single append entries", len(reqs))
+	log.Info().Int("n_requests", len(reqs)).Msg("aggregating commit requests into a single append entry")
 
 	// Handle each request by redirecting to the leader or creating an entry
 	// in the log and associating the client with the entries index for reply.
@@ -135,10 +138,11 @@ func (r *Replica) onVoteRequest(e Event) (err error) {
 		return ErrEventSourceError
 	}
 
-	debug(
-		"%s received vote request from %s in term %d",
-		r.Name, req.Candidate, req.Term,
-	)
+	log.Debug().
+		Str("name", r.Name).
+		Str("candidate", req.Candidate).
+		Uint64("term", req.Term).
+		Msg("received vote request")
 
 	// If RPC term is greater than local term, update and set state to follower.
 	if _, err := r.CheckRPCTerm(req.Term); err != nil {
@@ -153,15 +157,15 @@ func (r *Replica) onVoteRequest(e Event) (err error) {
 		if r.votedFor == "" || r.votedFor == req.Candidate {
 			// Ensure the log is as up to date as the candidate's.
 			if r.log.AsUpToDate(req.LastLogIndex, req.LastLogTerm) {
-				info("voting for %s in %d", req.Candidate, req.Term)
+				log.Info().Str("candidate", req.Candidate).Uint64("term", req.Term).Msg("voting for candidate")
 				r.ticker.Interrupt(ElectionTimeout)
 				rep.Granted = true
 				r.votedFor = req.Candidate
 			} else {
-				debug("log is not as up to date as %s", req.Candidate)
+				log.Debug().Str("candidate", req.Candidate).Msg("log is not as up to date as candidate")
 			}
 		} else {
-			debug("already voted for %s in %d", r.votedFor, r.term)
+			log.Debug().Str("voted_for", r.votedFor).Uint64("term", r.term).Msg("already voted in current term")
 		}
 	}
 
@@ -183,10 +187,12 @@ func (r *Replica) onVoteReply(e Event) error {
 
 	// If we're still a candidate, update vote and determine election
 	if r.state == Candidate {
-		debug(
-			"%s received vote granted=%t from %s in term %d",
-			r.Name, rep.Granted, rep.Remote, rep.Term,
-		)
+		log.Debug().
+			Str("candidate", r.Name).
+			Str("from", rep.Remote).
+			Bool("granted", rep.Granted).
+			Uint64("term", rep.Term).
+			Msg("received vote")
 
 		r.votes.Vote(rep.Remote, rep.Granted)
 		if r.votes.Passed() {
@@ -217,9 +223,15 @@ func (r *Replica) onAppendRequest(e Event) error {
 	}
 
 	if len(req.Entries) == 0 {
-		trace("heartbeat received in term %d from %s", req.Term, req.Leader)
+		log.Trace().Str("leader", req.Leader).Uint64("term", req.Term).Msg("heartbeat received")
+
 	} else {
-		debug("appending %d entries after index %d in term %d", len(req.Entries), req.PrevLogIndex, req.Term)
+		log.Debug().
+			Str("leader", req.Leader).
+			Uint64("term", req.Term).
+			Uint64("prev_log_index", req.PrevLogIndex).
+			Int("entries", len(req.Entries)).
+			Msg("appending entries after previous log index in term")
 	}
 
 	// Construct the reply
@@ -233,7 +245,7 @@ func (r *Replica) onAppendRequest(e Event) error {
 
 	// Check to make sure that the append entires term is not stale
 	if req.Term < r.term {
-		debug("append entries term is stale %d (remote) < %d (local)", req.Term, r.term)
+		log.Debug().Uint64("remote_term", req.Term).Uint64("local_term", r.term).Msg("append entries term is stale")
 		return nil
 	}
 
@@ -243,7 +255,7 @@ func (r *Replica) onAppendRequest(e Event) error {
 
 	// Determine if we should append entries
 	if err := r.log.Truncate(req.PrevLogIndex, req.PrevLogTerm); err != nil {
-		debug(err.Error())
+		log.Debug().Err(err).Msg("could not truncate log")
 		return nil
 	}
 

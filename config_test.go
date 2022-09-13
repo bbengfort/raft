@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rs/zerolog"
 
 	. "github.com/bbengfort/raft"
 )
@@ -18,7 +19,7 @@ var _ = Describe("Config", func() {
 			Tick:      "1200ms",
 			Timeout:   "300ms",
 			Aggregate: true,
-			LogLevel:  2,
+			LogLevel:  "debug",
 			Leader:    "alpha",
 			Uptime:    "15m",
 			Metrics:   "metrics.json",
@@ -39,7 +40,7 @@ var _ = Describe("Config", func() {
 		Ω(conf.Tick).Should(Equal("1s"))
 		Ω(conf.Timeout).Should(Equal("500ms"))
 		Ω(conf.Aggregate).Should(BeTrue())
-		Ω(conf.LogLevel).Should(Equal(3))
+		Ω(conf.GetLogLevel()).Should(Equal(zerolog.InfoLevel))
 
 		// Validate non configurations
 		Ω(conf.Name).Should(BeZero())

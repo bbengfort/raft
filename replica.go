@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/peers"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
@@ -44,7 +45,7 @@ func (r *Replica) Listen() error {
 		return fmt.Errorf("could not listen on %s", addr)
 	}
 	defer sock.Close()
-	info("listening for requests on %s", addr)
+	log.Info().Str("addr", addr).Msg("listening for requests")
 
 	// Initialize and run the gRPC server in its own thread
 	srv := grpc.NewServer()
@@ -91,7 +92,7 @@ func (r *Replica) Dispatch(e Event) error {
 
 // Handle the events in serial order.
 func (r *Replica) Handle(e Event) error {
-	trace("%s event received: %v", e.Type(), e.Value())
+	log.Trace().Str("type", e.Type().String()).Msg("event received")
 
 	switch e.Type() {
 	case HeartbeatTimeout:
@@ -169,7 +170,7 @@ func (r *Replica) CheckCommits() error {
 
 // CommitEntry responds to the client with a successful entry commit.
 func (r *Replica) CommitEntry(entry *pb.LogEntry) error {
-	debug("commit entry %d in term %d: applying %s", entry.Index, entry.Term, entry.Name)
+	log.Debug().Uint64("index", entry.Index).Uint64("term", entry.Term).Str("name", entry.Name).Msg("entry committed")
 
 	client, ok := r.clients[entry.Index]
 	if !ok {
@@ -191,7 +192,7 @@ func (r *Replica) CommitEntry(entry *pb.LogEntry) error {
 
 // DropEntry responds to the client of an unsuccessful commit.
 func (r *Replica) DropEntry(entry *pb.LogEntry) error {
-	debug("drop entry %d in term %d", entry.Index, entry.Term)
+	log.Debug().Uint64("index", entry.Index).Uint64("term", entry.Term).Str("name", entry.Name).Msg("entry dropped")
 
 	client, ok := r.clients[entry.Index]
 	if !ok {

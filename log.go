@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb "github.com/bbengfort/raft/api/v1beta1"
+	"github.com/rs/zerolog/log"
 )
 
 // NewLog creates and initializes a new log whose first entry is the NullEntry.
@@ -176,7 +177,7 @@ func (l *Log) Commit(index uint64) error {
 
 	// Update the commit index and the log
 	l.commitIndex = index
-	debug("committed index %d", l.commitIndex)
+	log.Debug().Uint64("index", l.commitIndex).Msg("committed index")
 	return nil
 }
 

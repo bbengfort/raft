@@ -3,6 +3,8 @@ package raft
 import (
 	"errors"
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Raft server states (not part of the state machine)
@@ -69,13 +71,12 @@ func (r *Replica) setState(state State) (err error) {
 // Stops all timers that might be running.
 func (r *Replica) setStoppedState() error {
 	if r.state == Stopped {
-		debug("%s is already stopped", r.Name)
+		log.Debug().Str("replica", r.Name).Msg("already stopped")
 		return nil
 	}
 
 	r.ticker.StopAll()
-
-	info("%s has been stopped", r.Name)
+	log.Debug().Str("replica", r.Name).Msg("replica has been stopped")
 	return nil
 }
 
@@ -91,7 +92,7 @@ func (r *Replica) setInitializedState() error {
 		peer.matchIndex = 0
 	}
 
-	debug("%s has been initialized", r.Name)
+	log.Debug().Str("replica", r.Name).Msg("replica has been initialized")
 	return nil
 }
 
@@ -111,7 +112,7 @@ func (r *Replica) setRunningState() error {
 		go r.Dispatch(&event{etype: ElectionTimeout, source: nil, value: nil})
 	}
 
-	status("%s is now running", r.Name)
+	log.Debug().Str("replica", r.Name).Msg("replica is now running")
 	return nil
 }
 
@@ -123,7 +124,7 @@ func (r *Replica) setFollowerState() error {
 	r.ticker.Stop(HeartbeatTimeout)
 	r.ticker.Start(ElectionTimeout)
 
-	status("%s is now a follower", r.Name)
+	log.Info().Str("replica", r.Name).Uint64("term", r.term).Msg("replica is now a follower")
 	return nil
 }
 
@@ -145,7 +146,7 @@ func (r *Replica) setCandidateState() error {
 		}
 	}
 
-	status("%s is candidate for term %d", r.Name, r.term)
+	log.Info().Str("replica", r.Name).Uint64("term", r.term).Msg("replica is now a candidate")
 	return nil
 }
 
@@ -173,6 +174,6 @@ func (r *Replica) setLeaderState() error {
 
 	// Start the heartbeat interval
 	r.ticker.Start(HeartbeatTimeout)
-	status("%s is leader for term %d", r.Name, r.term)
+	log.Info().Str("replica", r.Name).Uint64("term", r.term).Msg("replica is now the leader")
 	return nil
 }

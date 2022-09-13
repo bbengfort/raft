@@ -4,13 +4,14 @@ Package raft implements the Raft consensus algorithm.
 package raft
 
 import (
-	"log"
 	"math/rand"
 	"os"
 	"time"
 
 	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/noplog"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -23,14 +24,13 @@ func init() {
 	// Set the random seed to something different each time.
 	rand.Seed(time.Now().UnixNano())
 
-	// Initialize our debug logging with our prefix
-	SetLogger(log.New(os.Stdout, "[raft] ", log.Lmicroseconds))
-	cautionCounter = new(counter)
-	cautionCounter.init()
-
 	// Stop the grpc verbose logging
 	//lint:ignore SA1019 noplog doesn't implement the V2 interface
 	grpclog.SetLogger(noplog.New())
+
+	// Initialize zerolog for server-side process logging
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 }
 
 // StateMachine implements a handler for applying commands when they are
@@ -58,10 +58,15 @@ func New(options *Config) (replica *Replica, err error) {
 		return nil, err
 	}
 
-	// Set the logging level and the random seed
-	SetLogLevel(uint8(config.LogLevel))
+	// Configure logging (will modify logging globally for all packages!)
+	zerolog.SetGlobalLevel(config.GetLogLevel())
+	if config.ConsoleLog {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
+	// Set the random seed
 	if config.Seed != 0 {
-		debug("setting random seed to %d", config.Seed)
+		log.Debug().Int64("seed", config.Seed).Msg("setting random seed")
 		rand.Seed(config.Seed)
 	}
 
@@ -102,6 +107,6 @@ func New(options *Config) (replica *Replica, err error) {
 
 	// Set state to initialized
 	replica.setState(Initialized)
-	info("raft replica with %d remote peers created", len(replica.remotes))
+	log.Info().Str("name", replica.Name).Int("nPeers", len(replica.remotes)).Msg("raft replica created")
 	return replica, nil
 }
