@@ -14,6 +14,7 @@ import (
 	"github.com/bbengfort/x/peers"
 	"github.com/fatih/structs"
 	"github.com/koding/multiconfig"
+	"github.com/rs/zerolog"
 )
 
 // Config uses the multiconfig loader and validators to store configuration
@@ -24,14 +25,15 @@ import (
 // environment using environment variables prefixed with $RAFT_ and the all
 // caps version of the configuration name.
 type Config struct {
-	Name      string       `required:"false" json:"name,omitempty"`             // unique name of the local replica, hostname by default
-	Seed      int64        `required:"false" json:"seed,omitempty"`             // random seed to initialize random generator
-	Tick      string       `default:"1s" validate:"duration" json:"tick"`       // clock tick rate for timing (parseable duration)
-	Timeout   string       `default:"500ms" validate:"duration" json:"timeout"` // timeout to wait for responses (parseable duration)
-	Aggregate bool         `default:"true" json:"aggregate"`                    // aggregate append entries from multiple concurrent clients
-	LogLevel  int          `default:"3" validate:"uint" json:"log_level"`       // verbosity of logging, lower is more verbose
-	Leader    string       `required:"false" json:"leader,omitempty"`           // designated initial leader, if any
-	Peers     []peers.Peer `json:"peers"`                                       // definition of all hosts on the network
+	Name       string       `required:"false" json:"name,omitempty"`             // unique name of the local replica, hostname by default
+	Seed       int64        `required:"false" json:"seed,omitempty"`             // random seed to initialize random generator
+	Tick       string       `default:"1s" validate:"duration" json:"tick"`       // clock tick rate for timing (parseable duration)
+	Timeout    string       `default:"500ms" validate:"duration" json:"timeout"` // timeout to wait for responses (parseable duration)
+	Aggregate  bool         `default:"true" json:"aggregate"`                    // aggregate append entries from multiple concurrent clients
+	LogLevel   string       `default:"info" validate:"zerolog" json:"log_level"` // verbosity of logging, sets the zerolog log level
+	ConsoleLog bool         `default:"false" json:"console_log"`                 // output human readable logs instead of JSON logs
+	Leader     string       `required:"false" json:"leader,omitempty"`           // designated initial leader, if any
+	Peers      []peers.Peer `json:"peers"`                                       // definition of all hosts on the network
 
 	// Experimental configuration
 	// TODO: remove after benchmarks
@@ -211,6 +213,29 @@ func (c *Config) GetUptime() (time.Duration, error) {
 	return time.ParseDuration(c.Uptime)
 }
 
+// GetLogLevel returns the zerolog level
+func (c *Config) GetLogLevel() zerolog.Level {
+	c.LogLevel = strings.TrimSpace(strings.ToLower(c.LogLevel))
+	switch c.LogLevel {
+	case "trace":
+		return zerolog.TraceLevel
+	case "debug":
+		return zerolog.DebugLevel
+	case "info":
+		return zerolog.InfoLevel
+	case "warn", "warning":
+		return zerolog.WarnLevel
+	case "error":
+		return zerolog.ErrorLevel
+	case "fatal":
+		return zerolog.FatalLevel
+	case "panic":
+		return zerolog.PanicLevel
+	default:
+		return zerolog.Disabled
+	}
+}
+
 //===========================================================================
 // Validators
 //===========================================================================
@@ -261,6 +286,8 @@ func (v *ComplexValidator) processField(fieldName string, field *structs.Field) 
 			return v.processPathField(fieldName, field)
 		case "uint":
 			return v.processUintField(fieldName, field)
+		case "zerolog":
+			return v.processLogLevelField(fieldName, field)
 		default:
 			return fmt.Errorf("cannot validate type '%s'", field.Tag(v.TagName))
 		}
@@ -295,6 +322,27 @@ func (v *ComplexValidator) processUintField(fieldName string, field *structs.Fie
 	val := field.Value().(int)
 	if val < 0 {
 		return fmt.Errorf("%s is less than zero", fieldName)
+	}
+	return nil
+}
+
+func (v *ComplexValidator) processLogLevelField(fieldName string, field *structs.Field) error {
+	val := field.Value().(string)
+	val = strings.TrimSpace(strings.ToLower(val))
+
+	var levels = map[string]struct{}{
+		"trace":   {},
+		"debug":   {},
+		"info":    {},
+		"warn":    {},
+		"warning": {},
+		"error":   {},
+		"fatal":   {},
+		"panic":   {},
+	}
+
+	if _, ok := levels[val]; !ok {
+		return fmt.Errorf("unknown log level %q", val)
 	}
 	return nil
 }

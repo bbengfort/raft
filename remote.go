@@ -8,6 +8,7 @@ import (
 
 	pb "github.com/bbengfort/raft/api/v1beta1"
 	"github.com/bbengfort/x/peers"
+	out "github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -105,9 +106,9 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 
 		// Log the append entries message
 		if len(entries) > 0 {
-			debug("sending %d entries to %s", len(entries), c.Name)
+			out.Debug().Int("n_entries", len(entries)).Str("remote", c.Name).Msg("sending append entries")
 		} else {
-			trace("sending heartbeat to %s", c.Name)
+			out.Trace().Str("remote", c.Name).Msg("sending heartbeat")
 		}
 
 		req := &pb.AppendRequest{
@@ -122,7 +123,7 @@ func (c *Remote) AppendEntries(leader string, term uint64, log *Log) error {
 		// If we're not online, attempt to connect
 		if !c.online {
 			if err := c.Reset(); err != nil {
-				caution(err.Error())
+				out.Debug().Err(err).Str("remote", c.Name).Msg("not online, attempting to connect")
 				return
 			}
 		}
@@ -229,7 +230,7 @@ func (c *Remote) beforeSend() (context.Context, context.CancelFunc, error) {
 	// If we're not online, attempt to connect
 	if !c.online {
 		if err := c.Reset(); err != nil {
-			caution(err.Error())
+			out.Debug().Err(err).Str("remote", c.Name).Msg("not online, attempting to connect")
 			return nil, nil, err
 		}
 	}
@@ -242,16 +243,17 @@ func (c *Remote) beforeSend() (context.Context, context.CancelFunc, error) {
 // Handle errors and connections from non responses
 func (c *Remote) afterSend(err error) error {
 	if err != nil {
-		caution(err.Error())
+		out.Debug().Err(err).Str("remote", c.Name).Msg("could not send message")
+
 		if c.online {
 			// We were online and now we're offline
-			info("grpc connection to %s (%s) is offline", c.Name, c.Endpoint(false))
+			out.Warn().Err(err).Str("remote", c.Name).Str("endpoint", c.Endpoint(false)).Msg("grpc connection to remote is offline")
 		}
 		c.online = false
 	} else {
 		if !c.online {
 			// We were offline and now we're online
-			info("grpc connection to %s (%s) is online", c.Name, c.Endpoint(false))
+			out.Info().Str("remote", c.Name).Str("endpoint", c.Endpoint(false)).Msg("grpc connection to remote is online")
 		}
 		c.online = true
 	}
@@ -285,14 +287,14 @@ func (c *Remote) streamListener() {
 		}
 		if rep, err = c.stream.Recv(); err != nil {
 			if err != io.EOF {
-				caution(err.Error())
+				out.Debug().Err(err).Str("remote", c.Name).Msg("stream closed prematurely")
 			} else {
-				caution("stream to %s closed by remote", c.Name)
+				out.Debug().Err(err).Str("remote", c.Name).Msg("stream closed by remote")
 			}
 
 			if c.online {
 				// We were online and now we're offline
-				info("grpc connection to %s (%s) is offline", c.Name, c.Endpoint(false))
+				out.Warn().Err(err).Str("remote", c.Name).Str("endpoint", c.Endpoint(false)).Msg("grpc connection to remote is offline")
 			}
 			c.online = false
 			return
@@ -300,7 +302,7 @@ func (c *Remote) streamListener() {
 
 		if !c.online {
 			// We were offline and now we're online
-			info("grpc connection to %s (%s) is online", c.Name, c.Endpoint(false))
+			out.Info().Str("remote", c.Name).Str("endpoint", c.Endpoint(false)).Msg("grpc connection to remote is online")
 			c.online = true
 		}
 

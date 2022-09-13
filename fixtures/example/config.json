@@ -1,7 +1,8 @@
 {
   "tick": "1s",
   "timeout": "400ms",
-  "log_level": 2,
+  "log_level": "info",
+  "console_log": true,
   "aggregate": true,
   "leader": "charlie",
   "peers": [

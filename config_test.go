@@ -18,7 +18,7 @@ var _ = Describe("Config", func() {
 			Tick:      "1200ms",
 			Timeout:   "300ms",
 			Aggregate: true,
-			LogLevel:  2,
+			LogLevel:  "debug",
 			Leader:    "alpha",
 			Uptime:    "15m",
 			Metrics:   "metrics.json",
