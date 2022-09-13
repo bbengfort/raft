@@ -1,29 +1,29 @@
 {
   "tick": "1s",
   "timeout": "400ms",
-  "log_level": 4,
-  "aggregate": true, 
+  "log_level": 2,
+  "aggregate": true,
   "leader": "charlie",
   "peers": [
     {
       "pid": 1,
       "name": "alpha",
       "ip_address": "127.0.0.1",
-      "domain": "localhost",
+      "domain": "alpha",
       "port": 3264
     },
     {
       "pid": 2,
       "name": "bravo",
       "ip_address": "127.0.0.1",
-      "domain": "localhost",
+      "domain": "bravo",
       "port": 3265
     },
     {
       "pid": 3,
       "name": "charlie",
       "ip_address": "127.0.0.1",
-      "domain": "localhost",
+      "domain": "charlie",
       "port": 3266
     }
   ]

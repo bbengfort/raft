@@ -45,28 +45,33 @@ func main() {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "config",
-					Aliases: []string{"c"},
+					Aliases: []string{"c", "conf"},
 					Usage:   "configuration file for replica",
+					EnvVars: []string{"RAFT_CONFIG", "RAFTCONF"},
 				},
 				&cli.StringFlag{
 					Name:    "name",
 					Aliases: []string{"n"},
 					Usage:   "unique name of the replica instance",
+					EnvVars: []string{"RAFT_NAME"},
 				},
 				&cli.DurationFlag{
 					Name:    "uptime",
 					Aliases: []string{"u"},
 					Usage:   "specify a duration for the server to run",
+					EnvVars: []string{"RAFT_UPTIME"},
 				},
 				&cli.StringFlag{
 					Name:    "outpath",
 					Aliases: []string{"o"},
 					Usage:   "write metrics to specified path",
+					EnvVars: []string{"RAFT_METRICS"},
 				},
 				&cli.Int64Flag{
 					Name:    "seed",
 					Aliases: []string{"s"},
 					Usage:   "specify the random seed",
+					EnvVars: []string{"RAFT_SEED"},
 				},
 				&cli.BoolFlag{
 					Name:    "profile",
@@ -84,13 +89,15 @@ func main() {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "config",
-					Aliases: []string{"c"},
+					Aliases: []string{"c", "conf"},
 					Usage:   "configuration file for network",
+					EnvVars: []string{"RAFT_CONFIG", "RAFTCONF"},
 				},
 				&cli.StringFlag{
 					Name:    "addr",
 					Aliases: []string{"a"},
 					Usage:   "name or address of replica to connect to",
+					EnvVars: []string{"RAFT_ENDPOINT"},
 				},
 				&cli.StringFlag{
 					Name:    "key",
@@ -113,14 +120,15 @@ func main() {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "config",
-					Aliases: []string{"c"},
+					Aliases: []string{"c", "conf"},
 					Usage:   "configuration file for replica",
-					Value:   "",
+					EnvVars: []string{"RAFT_CONFIG", "RAFTCONF"},
 				},
 				&cli.StringFlag{
 					Name:    "addr",
 					Aliases: []string{"a"},
 					Usage:   "name or address of replica to connect to",
+					EnvVars: []string{"RAFT_ENDPOINT"},
 				},
 				&cli.UintFlag{
 					Name:    "requests",
@@ -162,11 +170,12 @@ func main() {
 //===========================================================================
 
 func initConfig(c *cli.Context) (err error) {
-	if c.String("config") != "" {
+	if path := c.String("config"); path != "" {
 		var f *os.File
-		if f, err = os.Open(c.String("config")); err != nil {
+		if f, err = os.Open(path); err != nil {
 			return cli.Exit(err, 1)
 		}
+		defer f.Close()
 
 		if err = json.NewDecoder(f).Decode(&config); err != nil {
 			return cli.Exit(err, 1)

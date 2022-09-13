@@ -6,6 +6,7 @@ SHELL := /bin/bash
 PACKAGE = raft
 PBPKG = $(CURDIR)/pb
 BUILD = $(CURDIR)/_build
+GIT_REVISION = $(shell git rev-parse --short HEAD)
 
 # Commands
 GOCMD = go
@@ -23,9 +24,8 @@ BM  = $(shell printf "\033[34;1m●\033[0m")
 GM = $(shell printf "\033[32;1m●\033[0m")
 RM = $(shell printf "\033[31;1m●\033[0m")
 
-
 # Export targets not associated with files.
-.PHONY: all install build raft deps test citest clean doc protobuf
+.PHONY: all install build raft deps test citest clean doc protobuf compose
 
 # Ensure dependencies are installed, run tests and compile
 all: deps build test
@@ -40,8 +40,8 @@ build: protobuf raft
 
 # Build the raft command and store in the build directory
 raft:
-	$(info $(GM) compiling raft executable …)
-	@ $(GOBUILD) -o $(BUILD)/raft ./cmd/raft
+	$(info $(GM) compiling raft executable on build $(GIT_REVISION) …)
+	@ $(GOBUILD) -ldflags="-X 'github.com/bbengfort/raft.GitVersion=$(GIT_REVISION)'" -o $(BUILD)/raft ./cmd/raft
 
 # Use dep to collect dependencies.
 deps:
@@ -77,3 +77,9 @@ clean:
 protobuf:
 	$(info $(GM) compiling protocol buffers …)
 	@ go generate ./...
+
+# Run docker compose
+compose:
+	$(info $(GM) building docker compose images)
+	@ docker compose -p raft build
+	@ docker compose -p raft up
