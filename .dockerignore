@@ -1,0 +1,20 @@
+# Development
+.git
+.gitignore
+.github
+.vscode
+LICENSE.txt
+README.md
+
+# OS Droppings
+.DS_Store
+
+# Docker stuff
+.dockerignore
+Dockerfile
+Dockerfile.prod
+docker-compose.yaml
+
+# Local configuration
+fixtures
+.env

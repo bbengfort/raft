@@ -67,6 +67,15 @@ $ raft commit -k "key" -v "value"
 
 This commits the command named "key" with the specified "value" to the log. Note that the client is automatically redirected to the leader and requires the same configuration to connect.
 
+## Docker Compose
+
+To run Raft nodes with Docker compose, use the following commands:
+
+```
+$ export GIT_REVISION=$(git rev-parse --short HEAD)
+$ docker compose build
+$ docker compose up
+```
 
 ## Benchmarks
 

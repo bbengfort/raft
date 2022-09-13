@@ -1,0 +1,52 @@
+version: "3"
+services:
+  alpha:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        GIT_REVISION: ${GIT_REVISION}
+    image: bbengfort/raft
+    init: true
+    ports:
+      - 3264:3264
+    volumes:
+      - ./fixtures/example:/etc/raft
+    environment:
+      - RAFT_NAME=alpha
+      - RAFT_SEED=53
+      - RAFT_CONFIG=/etc/raft/config.json
+
+  bravo:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        GIT_REVISION: ${GIT_REVISION}
+    image: bbengfort/raft
+    init: true
+    ports:
+      - 3265:3265
+    volumes:
+      - ./fixtures/example:/etc/raft
+    environment:
+      - RAFT_NAME=bravo
+      - RAFT_SEED=54
+      - RAFT_CONFIG=/etc/raft/config.json
+
+  charlie:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        GIT_REVISION: ${GIT_REVISION}
+    image: bbengfort/raft
+    init: true
+    ports:
+      - 3266:3266
+    volumes:
+      - ./fixtures/example:/etc/raft
+    environment:
+      - RAFT_NAME=charlie
+      - RAFT_SEED=55
+      - RAFT_CONFIG=/etc/raft/config.json
